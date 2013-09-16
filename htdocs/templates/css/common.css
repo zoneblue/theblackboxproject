@@ -1,0 +1,39 @@
+
+/*============================ZERO=======================================*/
+
+body,div,ul,ol,li,td,h1,h2,h3,p,a,table,form           { margin:0; padding:0; border:0; outline:0; }
+table,table td                                         { border-collapse:collapse;}
+a img,a:link img,a:visited img                         { outline:0; border:0; }
+
+/*fonts*/
+p,li,h1,h2,h3,td,textarea,legend,label,input,select,div { font-family: 'Open Sans','Segoe UI', Arial, sans-serif; color:#000}
+p,li,td,textarea,legend,label,input,select,div          { font-size:14px; line-height:20px; }
+
+@font-face {
+	font-family: 'Open Sans';
+	src: url('../fonts/opensans-regular-latin.eot');
+	src: url('../fonts/opensans-regular-latin.eot?#iefix') format('embedded-opentype'),
+		url('../fonts/opensans-regular-latin.woff') format('woff'),
+		url('../fonts/opensans-regular-latin.ttf') format('truetype');
+	font-weight: normal;
+	font-style: normal;
+}
+@font-face {
+	font-family: 'Open Sans';
+	src: url('../fonts/opensans-bold-latin.eot');
+	src: url('../fonts/opensans-bold-latin.eot?#iefix') format('embedded-opentype'),
+		url('../fonts/opensans-bold-latin.woff') format('woff'),
+		url('../fonts/opensans-bold-latin.ttf') format('truetype');
+	font-weight: bold;
+	font-style: normal;
+}
+@font-face {
+	font-family: 'Open Sans';
+	src: url('../fonts/opensans-italic-latin.eot');
+	src: url('../fonts/opensans-italic-latin.eot?#iefix') format('embedded-opentype'),
+		url('../fonts/opensans-italic-latin.woff') format('woff'),
+		url('../fonts/opensans-italic-latin.ttf') format('truetype');
+	font-weight: normal;
+	font-style: italic;
+}
+

@@ -1,0 +1,52 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+	<title>{PageTitle}</title>
+	<link rel="stylesheet" type="text/css" href="templates/css/common.css" />
+	<style type='text/css'>
+		table.view        { }
+		table.view tr     { vertical-align:top;}
+		div.viewgraph     { border:1px dotted #666; border-radius:4px;padding:3px;margin:1px; }
+
+		div.large         { display:inline-block; width:13em; background:#97A1DD; border-radius:4px; padding:0 3px; margin:2px;}
+		div.large span.h  { display:block; font-size:13px; font-weight:bold; color:#fff; text-transform:uppercase; letter-spacing:3px; }
+		div.large span.v  { font-size:40px; font-weight:bold; text-transform:uppercase;}
+		div.large span.u  { font-size:19px; color:#444;font-weight:bold;}
+
+		div.medium        { display:block; width:9em; border:1px dotted #666; border-radius:4px;padding:0 3px;margin:1px; text-align:right;}
+		div.medium span.h { font-size:12px; color:#97A1DD;  font-weight:bold; text-transform:uppercase;}
+		div.medium span.v { font-size:24px; font-weight:bold;}
+		div.medium span.u { font-size:17px; color:#999;font-weight:bold;}
+
+		div.small         { display:inline-block; width:5em; margin:0 3px;}
+		div.small span.h  { font-size:10px; color:#97A1DD; text-transform:uppercase;}
+		div.small span.v  { font-size:12px; font-weight:bold;}
+		div.small span.u  { font-size:12px; color:#999;}
+	</style>
+	{ExtraHeaders}
+</head>
+
+<body>
+	<table class='view'>
+		<tr>
+			<td colspan='2'>
+				{Pane::Top}
+			</td>
+		</tr>
+		<tr>
+			<td>
+				{Pane::Left}
+			</td>
+			<td>
+				{Pane::Right}
+			</td>
+		</tr>
+		<tr>
+			<td colspan='2'>
+				{Pane::Bottom}
+			</td>
+		</tr>
+	</table>
+	{Foot}
+</body>
+</html>

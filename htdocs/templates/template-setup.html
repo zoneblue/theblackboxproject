@@ -1,0 +1,31 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+	<head>
+		<title>{PageTitle}</title>
+		<link rel="stylesheet" type="text/css" href="templates/css/common.css" />
+		<link rel="stylesheet" type="text/css" href="templates/css/setup.css" />
+		{ExtraHeaders}
+	</head>
+
+	<body>
+		<div id='wrapper'>
+			<div id="head">
+				{Nav}
+			</div>
+			<div id='container'>
+				<div id="leftcol" >
+					{LeftSidebar}
+					<div>&nbsp;</div>
+				</div>
+				<div id="rightcol">
+					<div id='breadcrumbs'>{BreadCrumbs}</div>
+					<h2>{PageTitle}</h2>
+					{Body}
+				</div>
+			</div>
+			<div id="foot">
+				{Foot}
+			</div>
+		</div>
+	</body>
+</html>

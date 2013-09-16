@@ -1,0 +1,92 @@
+
+/*setup.css*/
+
+
+/*===========================LAYOUT=====================================*/
+
+body             {}
+#wrapper         { max-width:960px; margin:0 auto;} 
+#head            { min-height:25px; background:#7176B0; margin-bottom:1em; border-bottom:1px solid #ccc;} 
+#container       { float:left; width:100%;} 
+  #leftcol       { float:left; width:17%; }
+  #rightcol      { float:left; width:80%; padding-bottom:2em; }
+#foot            { clear:left; min-height:25px; background:#7176B0;border-top:1px solid #ccc; } 
+
+
+a, a:visited {color:blue;}
+tr {vertical-align:top;}
+th {text-align:left;}
+h2 {margin-bottom:16px;}
+table.wborder td { border:2px solid #ddd; padding:2px 10px 2px 2px;}
+/*
+table.autohide td a { visibility:hidden;}
+table.autohide td:hover a { visibility:visible;}
+*/
+.small { font-size:12px;}
+#leftcol p { font-size:12px; margin-right:10px;}
+
+
+div#head   { padding-left:16%;}
+div#head a { display:inline-block; height:25px; padding:2px 8px; color:white; text-decoration:none;}
+div#head a:hover { background:#BBB8FC;text-decoration:underline;}
+
+div.graph {width:200px;height:100px;background:#ddd;margin:5px;margin-right:0; padding:5px; padding-top:2px;}
+table.padright td {padding-right:1.75em;}
+h3.section { margin:1.5em 0 0.5em; border-bottom:1px dotted #ccc;border-top:1px dotted #ccc; padding:3px; margin-left:-3px; }
+h3.section a { font-size:14px; font-weight:normal;}
+
+
+/*===========================FORMS=====================================*/
+
+fieldset { 
+	margin: 2em 0; 
+	padding: 10px 20px; 
+	border: 2px solid #aaa; 
+	border-radius: 2px;
+}
+legend {
+	margin-left: 0px;
+	font-size: 16px;
+	color:#666;
+}
+input[type='text'],textarea,select{ 
+	width:40%; 
+	border:1px solid #999; 
+	border-radius:2px;
+}
+input[type="submit"],input[type="button"] { 
+	background:#BBB8FC; 
+	border-radius:5px; 
+	border:1px solid #7176B0;
+	width:90px;
+	padding:1px; 
+	cursor:pointer;
+}
+input[type="submit"]:hover, input[type="button"]:hover   { background-color:#A4A0FC; }
+
+
+.greyed { color:#999;}
+span.form-error { color:red;}
+
+div.row {
+	clear:both; 
+	margin-top:4px;
+}
+div.buttons {
+	clear:both; 
+	padding-top:10px;
+	text-align:right;
+}
+label{
+	float:left;
+	width:30%;
+	text-align:right;
+	padding-bottom:5px;
+	padding-right:5px;
+	color: #333; 
+	font-weight:normal;
+}
+
+table th {padding:0; padding-left:4px; }
+
+

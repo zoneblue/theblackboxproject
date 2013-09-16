@@ -1,0 +1,61 @@
+
+/*============================ZERO=======================================*/
+
+body,div,ul,ol,li,td,h1,h2,h3,p,a,table,form           { margin:0; padding:0; border:0; outline:0; }
+table,table td                                         { border-collapse:collapse;}
+a img,a:link img,a:visited img                         { outline:0; border:0; }
+
+/*fonts*/
+p,li,h1,h2,h3,td,textarea,legend,label,input,select,div { font-family: 'Open Sans','Segoe UI', Arial, sans-serif; color:#000}
+p,li,td,textarea,legend,label,input,select,div          { font-size:14px; line-height:20px; }
+
+@font-face {
+	font-family: 'Open Sans';
+	src: url('../fonts/opensans-regular-latin.eot');
+	src: url('../fonts/opensans-regular-latin.eot?#iefix') format('embedded-opentype'),
+		url('../fonts/opensans-regular-latin.woff') format('woff'),
+		url('../fonts/opensans-regular-latin.ttf') format('truetype');
+	font-weight: normal;
+	font-style: normal;
+}
+@font-face {
+	font-family: 'Open Sans';
+	src: url('../fonts/opensans-bold-latin.eot');
+	src: url('../fonts/opensans-bold-latin.eot?#iefix') format('embedded-opentype'),
+		url('../fonts/opensans-bold-latin.woff') format('woff'),
+		url('../fonts/opensans-bold-latin.ttf') format('truetype');
+	font-weight: bold;
+	font-style: normal;
+}
+@font-face {
+	font-family: 'Open Sans';
+	src: url('../fonts/opensans-italic-latin.eot');
+	src: url('../fonts/opensans-italic-latin.eot?#iefix') format('embedded-opentype'),
+		url('../fonts/opensans-italic-latin.woff') format('woff'),
+		url('../fonts/opensans-italic-latin.ttf') format('truetype');
+	font-weight: normal;
+	font-style: italic;
+}
+
+
+/*===========================VIEW=====================================*/
+
+table.view { width:100%;}
+table.view tr { vertical-align:top;}
+table.view td { border:1px solid #ddd; padding:4px;}
+div.viewgraph { border:1px dotted #666; border-radius:4px;padding:3px;margin:1px; }
+
+div.large         { display:inline-block; width:13em; background:#97A1DD; border-radius:4px; padding:0 3px; margin:2px;}
+div.large span.h  { display:block; font-size:13px; font-weight:bold; color:#fff; text-transform:uppercase; letter-spacing:3px; }
+div.large span.v  { font-size:40px; font-weight:bold; text-transform:uppercase;}
+div.large span.u  { font-size:19px; color:#444;font-weight:bold;}
+
+div.medium        { display:block; width:9em; border:1px dotted #666; border-radius:4px;padding:0 3px;margin:1px; text-align:right;}
+div.medium span.h { font-size:12px; color:#97A1DD;  font-weight:bold; text-transform:uppercase;}
+div.medium span.v { font-size:24px; font-weight:bold;}
+div.medium span.u { font-size:17px; color:#999;font-weight:bold;}
+
+div.small         { display:inline-block; width:5em; margin:0 3px;}
+div.small span.h  { font-size:10px; color:#97A1DD; text-transform:uppercase;}
+div.small span.v  { font-size:12px; font-weight:bold;}
+div.small span.u  { font-size:12px; color:#999;}
