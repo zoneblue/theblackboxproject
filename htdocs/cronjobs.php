@@ -124,7 +124,7 @@ function make_graph($id_element,$settings,$modules) {
 	$params= array(
 		//chart
 		'title'=>            '',
-		'size'=>             array($settings['width'],$settings['height']), //w h  420/680 leaves 60px per hour!
+		'size'=>             array($settings['width'],$settings['height']), //680 wide leaves 60px per hour
 		'scale'=>            1,                  //upscales everything for print
 		'margins'=>          array(20,20,27,40), //t r b l
 		'showborder'=>       false,
@@ -133,10 +133,10 @@ function make_graph($id_element,$settings,$modules) {
 		'shownote'=>         false,
 		'note_pos'=>         array(50,34),   //from tl, or use - for br aligned
 		'note_content'=>     '',
-		'fontfolder'=>       '/home/www-data/html/lib/fonts/', //trailing slash
-		'fontfile'=>         'SegoeSb.ttf',  //calibri.ttf
-		'fontfilebold'=>     'calibrib.ttf', //nb:calibri wont smooth or rotate below 13pt
-		'fontsize'=>          8,
+		'fontfolder'=>       dirname(__FILE__).'/templates/fonts/', //trailing slash
+		'fontfile'=>         'opensans-semibold-latin.ttf', 
+		'fontfilebold'=>     'opensans-bold-latin.ttf', 
+		'fontsize'=>         8,
 		'fontcolor'=>        '#444',
 		'border_color'=>     'rgb(150,150,150)',
 		'grid_color_major'=> 'rgb(150,150,150)',
