@@ -51,7 +51,7 @@ while ($row= $db->fetch_row($result)) {
 	make_graph($id_element,$settings,$blackbox->modules);
 }
 
-//print $profiler->dump();
+print $profiler->dump();
 
 
 
