@@ -311,7 +311,7 @@ class midnite_classic extends Module {
 			'interval'=>   'day',
 			'method'=>     'get_register',
 			'argument'=>   '[4138]/3600',
-			'comment'=>    '(decimal) hours',
+			'comment'=>    '(decimal) register seconds, converted to hours',
 			'unit'=>       'hrs',
 			'priority'=>   4,
 			'order'=>      $order++,
@@ -519,8 +519,7 @@ class midnite_classic extends Module {
 		//convert raw registers to decimal datapoints
 		$data= array();
 		foreach ($this->datapoints as $label=> $datapoint) {
-			if ($datapoint->type<>'sampled' or $datapoint->method<>'get_register') continue; 		
-			$data[$label]= $this->get_register($datapoint->argument);
+			if ($datapoint->method=='get_register') $data[$label]= $this->get_register($datapoint->argument);
 		}	
 		
 		return $data;
@@ -652,10 +651,11 @@ class midnite_classic extends Module {
 		//this assumes each dp is one minute
 		//will need to fix this when other sample rates are introduced.
 		$tally= 0;
+		$len=2; //2 minutes
 		foreach ($this->datapoints['state']->data as $n=> $state) {
-			if ($arg=='bulk'   and $state==4) $tally+=1; //1 minute
-			if ($arg=='absorb' and $state==3) $tally+=1; //1 minute
-			if ($arg=='float'  and $state<7 and $state >4) $tally+=1; //1 minute
+			if ($arg=='bulk'   and $state==4) $tally+= $len; 
+			if ($arg=='absorb' and $state==3) $tally+= $len; 
+			if ($arg=='float'  and $state<7 and $state >4) $tally+= $len; 
 		}
 		$tally= $tally/60;
 		$tally= round($tally,1);
@@ -678,11 +678,12 @@ class midnite_classic extends Module {
 		//this assumes each dp is one minute
 		//will need to fix this when other sample rates are introduced.
 		$tally= 0;
+		$len=2; //2 minutes
 		foreach ($this->datapoints['state']->data as $n=> $state) {
 			$pout= $this->datapoints['pout']->data[$n];
-			if ($arg=='pout/bulk'  and $state==4)              $tally+= $pout; 
-			if ($arg=='pout/absorb' and $state==3)             $tally+= $pout; 
-			if ($arg=='pout/float' and $state<7 and $state >4) $tally+= $pout;  
+			if ($arg=='pout/bulk'  and $state==4)              $tally+= ($pout*$len); 
+			if ($arg=='pout/absorb' and $state==3)             $tally+= ($pout*$len); 
+			if ($arg=='pout/float' and $state<7 and $state >4) $tally+= ($pout*$len);  
 			if ($arg=='pout/total') $tally+= $pout;  
 		}
 		$tally= $tally/60;

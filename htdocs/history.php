@@ -1,9 +1,9 @@
 <?php
 
 /** 
- *  SETUP.PHP
+ *  HISTORY.PHP
  *  =========
- *  User configuration of views.  Various form incarnations, edit, del, datapts and graphs
+ *  View previous periods data.
  *  
  *  @package:  The Blackbox Project.
  *  @author:   Peter 2013
