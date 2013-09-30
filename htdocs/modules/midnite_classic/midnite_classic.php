@@ -561,6 +561,7 @@ class midnite_classic extends Module {
 	protected function compute() {}
 
 
+
 	#####################################################################################################################
 	###
 	###  DERIVATIONS
@@ -648,14 +649,12 @@ class midnite_classic extends Module {
 	 **/
 
 	protected function calc_daily_duration($arg) {
-		//this assumes each dp is one minute
-		//will need to fix this when other sample rates are introduced.
+		$len= $this->settings['sample_interval']/60;
 		$tally= 0;
-		$len=2; //2 minutes
 		foreach ($this->datapoints['state']->data as $n=> $state) {
-			if ($arg=='bulk'   and $state==4) $tally+= $len; 
-			if ($arg=='absorb' and $state==3) $tally+= $len; 
-			if ($arg=='float'  and $state<7 and $state >4) $tally+= $len; 
+			if ($arg=='bulk'   and $state==4)                 $tally+= $len; 
+			if ($arg=='absorb' and $state==3)                 $tally+= $len; 
+			if ($arg=='float'  and ($state>4) and ($state<7)) $tally+= $len; 
 		}
 		$tally= $tally/60;
 		$tally= round($tally,1);
@@ -675,16 +674,14 @@ class midnite_classic extends Module {
 	 **/
 
 	protected function calc_daily_sum($arg) {
-		//this assumes each dp is one minute
-		//will need to fix this when other sample rates are introduced.
+		$len= $this->settings['sample_interval']/60;
 		$tally= 0;
-		$len=2; //2 minutes
 		foreach ($this->datapoints['state']->data as $n=> $state) {
 			$pout= $this->datapoints['pout']->data[$n];
-			if ($arg=='pout/bulk'  and $state==4)              $tally+= ($pout*$len); 
-			if ($arg=='pout/absorb' and $state==3)             $tally+= ($pout*$len); 
-			if ($arg=='pout/float' and $state<7 and $state >4) $tally+= ($pout*$len);  
-			if ($arg=='pout/total') $tally+= $pout;  
+			if ($arg=='pout/bulk'  and ($state==4))                $tally+= ($pout*$len); 
+			if ($arg=='pout/absorb' and ($state==3))               $tally+= ($pout*$len); 
+			if ($arg=='pout/float' and ($state<7) and ($state >4)) $tally+= ($pout*$len);  
+			if ($arg=='pout/total')                                $tally+= ($pout*$len);   
 		}
 		$tally= $tally/60;
 		$tally= round($tally,0);

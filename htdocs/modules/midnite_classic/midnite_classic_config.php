@@ -17,10 +17,10 @@ $set['module_name']=         'Midnite Classic';
 
 $set['sample_device']=       true;
 $set['sample_during_hours']= '06-19';
-$set['sample_interval']=     60; //seconds
+$set['sample_interval']=     120; //seconds
 
 $set['store_in_db']=         true;
-$set['store_interval']=      60; //seconds
+$set['store_interval']=      120; //seconds
 $set['store_db_table']=      'classiclogs';
 $set['store_db_table_day']=  'classicdaylogs';
 

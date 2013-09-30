@@ -39,7 +39,7 @@ class Blackbox {
 	protected  $db;
 
 	public function __construct($incldata=false) {
-		$this->db=       $GLOBALS['db'];
+		$this->db= $GLOBALS['db'];
 		$profiler= $GLOBALS['profiler'];
 		
 		//search modules folder
@@ -56,7 +56,7 @@ class Blackbox {
 			//load the datapoints data if requested
 			if ($incldata)  $this->modules[$modname]->load_data();
 			
-			$profiler->add('Module data all loaded');
+			$profiler->add('Blackbox constructor ends');
 		}
 	}
 	
@@ -213,17 +213,17 @@ class Blackbox {
  * 
  *  Of the methods contained here, define_datapoints and read_device are the primary methods required for each module.
  *  The rest are stock methods. If you feel an irrepressable urge to alter the abstract class, most likely 
- *  its because you are wanting to improve it, therefore please commit some code to the svn ;)
+ *  its because you are wanting to improve it, therefore please commit some code to svn ;)
  *
- *  In general there are four ways to use modules:
- *  1. from cron:        process_device(true)
- *  2. view current:     load_data
+ *  In general there are three ways to use modules:
+ *  1. from cron:        process_device()
+ *  2. view current:     load_data()
  *  4. view historic:    load_data(date)
  * 
  *	 Datapoints:
  *  Property datapoints holds an array of datapoint objects.
  *  The datapoint key is the db column name and unique key for the datapoint, herein after refered to as 'dp'
- *  They are defined like the below, then loaded into nominal child objects.
+ *  They are defined like the below, then loaded into nominal child dp objects.
  *
  *  $defn['vbat']= array( 
  *    'name'=>     "Battery voltage",
@@ -242,13 +242,11 @@ class Blackbox {
  *  Public methods, see code for documentation for private methods
  *  ---------------------------------------------------------------
  *    
- *  PROCESS_DEVICE             Usage: $module->process_device(true)
+ *  PROCESS_DEVICE             Usage: $module->process_device()
  *     
  *     This is called from cronjobs to actually sample the device and store the data.
- *     The flag determines whether the dbase will be written.
  *     It calls read_dbase, read_device, calc_derived, then write_dbase in sequence. 
  *     It does this so that daily agregations can be calculated and stored.
- *     Nb: At present its assumed that periodic=minute. 
  *     Nb: this and load_data, could possibly be moved to the blackbox class
  *     Later more frequent periodics will be allowed, and a minute agregation added.
  *     When done, returns silently.
@@ -261,7 +259,7 @@ class Blackbox {
  *     plus the year to date of daily agregate data. If you need more than that you can call it multiple times.
  *
  *
- *  GET_SETTING               Usage: $s= $module->get_setting('module_name')
+ *  GET_SETTING                Usage: $s= $module->get_setting('module_name')
  *    
  *     Get module setting, self explanatory 
  *     Returns a single module setting
@@ -271,7 +269,6 @@ class Blackbox {
  *
  *     The datapoint sample record keys are integer, and the timestamps for those keys are held at the module level
  *     The timestamps are iso datetime format for current_value and periodic, iso date format for day or greater.
- *
  *
  *
  *  @license:  GPLv3. 
@@ -314,7 +311,7 @@ abstract class Module {
 	public function __construct() {
 		
 		//get db
-		$this->db= $GLOBALS['db'];
+		$this->db=       $GLOBALS['db'];
 		$this->profiler= $GLOBALS['profiler'];
 		
 		//intialise settings, from the _config file
@@ -329,7 +326,7 @@ abstract class Module {
 		
 		//initialise the dataset date keys
 		//the datapoints hold an ordinary array,datetimes holds an ordinary array of the date keys for those arrays, make sense?
-		//saves lugging around thousands and thousands of date keys
+		//saves lugging around thousands of date keys
 		$this->datetimes= array(
 			'current_value'=> '',
 			'periodic'=> array(), //per N sec intervals exactly as db stored for 1 day
@@ -339,7 +336,7 @@ abstract class Module {
 		//set the definitive time for the new sample
 		$this->datetime= date("Y-m-d H:i:s");
 		
-		//initialise the datapoints
+		//initialise our datapoints
 		$defns= $this->define_datapoints();		
 		
 		foreach ($defns as $label=>$defn) {
@@ -367,7 +364,7 @@ abstract class Module {
 	/**
 	 * GET_SETTING
 	 * std module method
-	 * getter for settings 
+	 * public getter for settings 
 	 * 
 	 * @args   (string) key 
 	 * @return (string) value
@@ -382,7 +379,7 @@ abstract class Module {
 	/**
 	 * PROCESS_DEVICE
 	 * std module method
-	 * this is for the cron job 
+	 * for the cron job, effects a device sample, plus post processing 
     * 
 	 * @args  nil 
 	 * @return (array) dp data
@@ -393,12 +390,9 @@ abstract class Module {
 
 		//read device first, so as to delay anything cpu intensive
 		$data= $this->read_device(); 	
-		$this->device_has_been_read= true;
 		if (!$data) $this->code= 1;
-		
-		if ($data) {
-			
-			//now get the periodic data for calc_derived 
+		else {
+			//now get the day's periodic data  
 			$this->read_dbase();
 
 			//then add the fresh sample to the dp data
@@ -409,14 +403,17 @@ abstract class Module {
 				if (isset($data[$label]) and count($data[$label])) $datapoint->append($data[$label]);		
 			}
 
-			//do the derivations for stored derived dps
+			//finally do the derivations
 			$this->calc_derived();
+			
+			//mark done
+			$this->device_has_been_read= true;
 		}
 		
 		//store all permanently
 		$this->write_dbase();
 		
-		return true;
+		return !$this->code;
 	}
 
 
@@ -447,7 +444,7 @@ abstract class Module {
 		$day=   date("Y-m-d", strtotime($dtime));
 
 
-		### Periodic
+		### Periodic series
 		
 		//prep hash
 		$data= array();
@@ -480,7 +477,7 @@ abstract class Module {
 		}
 
 
-		### Day
+		### Day series
 		
 		//prep hash
 		$data= array();
@@ -521,7 +518,6 @@ abstract class Module {
 		
 		return true;
 	}
-
 	
 
 	/**
@@ -544,15 +540,12 @@ abstract class Module {
 	 * creates derived dps (from sampled), for the whole day (to date)
 	 * this either runs following read device, or be called by get_datapoint/s
 	 * 
-	 * @args   (date) iso day 
+	 * @args   nil 
 	 * @return (bool) success
 	 *
 	 **/
 	 
 	protected function calc_derived() {
-		
-		$dtime= $this->datetime; 
-		$day= date("Y-m-d", strtotime($dtime)); 
 		
 		//iterate datapoints
 		foreach ($this->datapoints as $label=> $datapoint) {
@@ -560,14 +553,11 @@ abstract class Module {
 			if ($datapoint->type<>'derived') continue;
 
 			//get derived value(s) via the specified method
-			$method=   $datapoint->method;
-			$argument= $datapoint->argument;
-			$data= $this->{$method}($argument);  
+			$data= $this->{$datapoint->method}($datapoint->argument);  
 			
 			//store
 			if (is_array($data)) $datapoint->set('periodic',$data);
 			else                 $datapoint->set('day',$data);
-			
 		}	
 		
 		return true;
@@ -594,6 +584,7 @@ abstract class Module {
 		//prepare periodic query
 		$query_insert=$query_insert_day='';
 		foreach ($this->datapoints as $label=> $datapoint) {
+			if ($this->code) continue;
 			if (!$datapoint->store) continue;
 			
 			$field= $db->quote($label);
@@ -605,7 +596,6 @@ abstract class Module {
 		
 		//write periodic
 		if ($query_insert) {
-			if ($this->code) $query_insert='';
 
 			$request= "
 				insert into `:table` set
@@ -615,15 +605,17 @@ abstract class Module {
 			";	
 			$params= array(
 				'table'=> $this->settings['store_db_table'],
-				'dtime'=> $this->datetime,
 				'code'=>  $this->code,
+				'dtime'=> $this->datetime,
 			);
 			$db->query($request,$params) or codeerror('DB error',__FILE__,__LINE__);
 		}
 		
-		//write day
-		if (!$this->code and $query_insert_day) {
+		//write day, keep overwriting current day til last one stands
+		if ($query_insert_day) {
+		
 			$day= date("Y-m-d", strtotime($this->datetime));
+			
 			$request= "
 				select id from `:daytable` 
 				where date_created= ':day'
@@ -654,17 +646,17 @@ abstract class Module {
 				'daytable'=> $this->settings['store_db_table_day'],
 				'day'=>    $day,
 			);
-			$db->query($request,$params) or codeerror('DB error'. $db->last_query,__FILE__,__LINE__);
+			$db->query($request,$params) or codeerror('DB error',__FILE__,__LINE__);
 		}
 
 		return true;
 	}
-		
-	
+
+
 	/**
 	 * READ_COMPUTED
 	 * std module method
-	 * for get_data read computed dps
+	 * for get_data read computed dps, in hindsight this isnt gona work as it takes far too long on arm
 	 * 
 	 * @args   nil 
 	 * @return (bool) success 
@@ -728,7 +720,7 @@ abstract class Module {
  		if ($dtime) $this->datetime= $dtime;
 		
 		$this->read_dbase(); 		$this->profiler->add("Module $this->name read dbase ends");
-		$this->read_computed();		$this->profiler->add("Module $this->name read computed ens");
+		$this->read_computed();		$this->profiler->add("Module $this->name read computed ends");
 		$this->calc_derived();		$this->profiler->add("Module $this->name calc derived ends");
 
 	}
