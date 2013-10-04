@@ -17,17 +17,12 @@
 
 include('init.php');
 
-//defaults
-//we could get these from the view template to make it more flexible
-$panetags= array('Top','Left','Right','Bottom');
+//default styles
 $styles=   array('small','medium','large');
 
 //new page instance
-$page= new Page('template-setup.html');
 $form= new Form;
-
-//set nav throughout
-$page->tags['Nav']= "<a href='index.php'>View</a> <a href='history.php'>History</a> <a href='setup.php'>Setup</a>";	
+$page= new Page('template-setup.html');
 
 //get module/dp definitions
 $blackbox= new Blackbox();
@@ -35,6 +30,7 @@ $modules= $blackbox->modules;
 
 //get incoming
 $do=         getpost('do');
+$id_view=    getpost('id_view');
 $id_element= getpost('id_element');
 $series=     getpost('series');
 $name=       getpost('name');
@@ -85,6 +81,74 @@ if (!$db->num_rows($result)) {
 		$page->render();
 	}
 }
+//check table - elements
+$query= "show tables like 'blackboxviews'";		
+$result= $db->query($query) or codeerror('DB error',__FILE__,__LINE__);
+if (!$db->num_rows($result)) {
+	$query= "
+		create table blackboxviews (
+			id_view      int unsigned primary key auto_increment,
+			viewname     varchar(255) not null,
+			type         char(1) not null,
+			settings     text not null,
+			position     tinyint unsigned not null
+		);
+	";
+	if ($db->query($query))  {}
+	else {
+		//Display page
+		$page->tags['PageTitle'] =  'Error';
+		$page->tags['Body']=	 "Our attempt to add the elements table failed. That means your database/permissions are not set right.";
+		$page->render();
+	}
+}
+
+
+###  COMMON
+###
+###############################################
+
+
+//check ids
+if (isgoodid($id_element)) {
+	$query= "select id_view from blackboxelements where id_element=':id_element' ";	
+	$params= array('id_element'=>$id_element);
+	$result= $db->query($query,$params) or codeerror('DB error',__FILE__,__LINE__);
+	$row= $db->fetch_row($result) or die('Invalid id'.__LINE__);
+	$id_view= (int)$row['id_view'];
+}
+else $id_element=0;
+
+if (isgoodid($id_view)) {
+	$query= "select id_view from blackboxviews where id_view=':id_view' ";	
+	$params= array('id_view'=>$id_view);
+	$result= $db->query($query,$params) or codeerror('DB error',__FILE__,__LINE__);
+	$row= $db->fetch_row($result) or die('Invalid id'.__LINE__);
+}
+else $id_view=0;
+
+//get views
+$query= "select * from blackboxviews order by id_view ";	
+$result= $db->query($query) or codeerror('DB error',__FILE__,__LINE__);
+$views= array(); $vnav='';
+while ($row= $db->fetch_row($result)) {
+	$views[]= $row;
+	$vnav.="<a href='index.php?id_view={$row['id_view']}'>View {$row['id_view']}</a> ";
+}
+
+//set nav throughout
+$page->tags['Nav']= "$vnav <a href='setup.php'>Setup</a> <a href='history.php'>History</a>";	
+
+//get view tags
+$panetags= array(); 
+if ($id_view) {
+	foreach($page->find_tags("template-view$id_view.html") as $tag) {
+		if (substr($tag,0,6)=="Pane::") $panetags[]= substr($tag,6);
+	}
+}
+
+
+
 			
 //db fix
 if ($do=='fixdb') {
@@ -137,13 +201,14 @@ if ($do=='checkdb') {
 }
 
 
+
 ###  DEL ELEMENT
 ###
 ###############################################
 
 if ($do=='delelement') {
 	
-	if (!isgoodid($id_element)) die('Invalid id '.__LINE__);
+	if (!$id_element) die('Invalid id '.__LINE__);
 	$query= "delete from blackboxelements where id_element= ':id_element' ";	
 	$params= array('id_element'=>$id_element);
 	$db->query($query,$params) or codeerror('DB error',__FILE__,__LINE__);
@@ -157,11 +222,13 @@ if ($do=='delelement') {
 
 if ($do=='editdatapt2') {
 
+	if (!$id_view) die('Invalid id '.__LINE__);
+
 	//clean and val
 	if (!$datapt)     $form->errors['datapt']= "field empty";
 	if (!$style)      $form->errors['style']=  "field empty";
 	if (!$panetag)    $form->errors['panetag']="field empty";
-	if ($resolution) $resolution=(int)$resolution;
+	if ($resolution) $resolution= (int)$resolution;
 	
 	//if valid proceed
 	if ($form->errors) $do='editdatapt';
@@ -172,14 +239,15 @@ if ($do=='editdatapt2') {
 			$query= "
 				insert into blackboxelements set
 				type= 'd',
-				id_view=1
+				id_view= ':id_view'
 			";	
-			$db->query($query) or codeerror('DB error',__FILE__,__LINE__);
+		$params= array('id_view'=> $id_view,);
+			$db->query($query,$params) or codeerror('DB error',__FILE__,__LINE__);
 			$id_element= $db->insert_id();
 		}
 	
 		//pack settings
-		$settings=array(); 
+		$settings= array(); 
 		list($mod,$dp)= explode('::',$datapt);
 		$settings['module']=    $mod;
 		$settings['datapoint']= $dp;
@@ -203,6 +271,8 @@ if ($do=='editdatapt2') {
 			'id_element'=> $id_element,
 		);
 		$db->query($query,$params) or codeerror('DB error',__FILE__,__LINE__);
+		
+		$do='config';
 	}
 }
 
@@ -213,6 +283,8 @@ if ($do=='editdatapt2') {
 ###############################################
 
 if ($do=='editdatapt') {
+
+	if (!$id_view) die('Invalid id '.__LINE__);
 
 	//preload form
 	if ($form->errors) {}
@@ -290,7 +362,7 @@ if ($do=='editdatapt') {
 
 	//prep
 	$do=     'editdatapt2';
-	$backto= 'setup.php';
+	$backto= "setup.php?do=config&amp;id_view=$id_view";
 	
 	//assemble form
 	$bodyinsert="
@@ -329,6 +401,7 @@ if ($do=='editdatapt') {
 				</div>
 				<div class='buttons'>
 					<input type='hidden' name='do' value='$do' />
+					<input type='hidden' name='id_view' value='$id_view' />
 					<input type='hidden' name='id_element' value='$id_element' />
 					<input type='button' value='Cancel'  onClick=\"document.location.href='$backto';\"  />
 					<input type='submit' value='OK' />
@@ -351,6 +424,7 @@ if ($do=='editdatapt') {
 
 if ($do=='editseries2' or $do=='delseries') {
 
+	if (!$id_view)    die('Invalid id '.__LINE__);
 	if (!$id_element) die('Invalid id '.__LINE__);
 	if ($do=='delseries' and !isgoodid($series))  die('Invalid id '.__LINE__);
 	
@@ -417,6 +491,7 @@ if ($do=='editseries2' or $do=='delseries') {
 
 if ($do=='editseries') {
 
+	if (!$id_view)    die('Invalid id '.__LINE__);
 	if (!$id_element) die('Invalid id '.__LINE__);
 	
 	//preload form
@@ -515,6 +590,8 @@ if ($do=='editseries') {
 
 if ($do=='editgraph2') {
 
+	if (!$id_view) die('Invalid id '.__LINE__);
+
 	//clean
 	$width=      (int)$width;
 	$height=     (int)$height;
@@ -546,10 +623,11 @@ if ($do=='editgraph2') {
 		if (!isgoodid($id_element)) {
 			$query= "
 				insert into blackboxelements set
-				id_view=1,
+				id_view= ':id_view',
 				type='g'
 			";	
-			$db->query($query) or codeerror('DB error',__FILE__,__LINE__);
+			$params= array('id_view'=>$id_view);
+			$db->query($query,$params) or codeerror('DB error',__FILE__,__LINE__);
 			$id_element= $db->insert_id();
 			$settings= array(); 
 		}
@@ -601,9 +679,11 @@ if ($do=='editgraph2') {
 
 if ($do=='editgraph') {
 
+	if (!$id_view) die('Invalid id '.__LINE__);
+
 	//preload form
 	if ($form->errors) {}
-	elseif (isgoodid($id_element)) {
+	elseif ($id_element) {
 		$query= "select * from blackboxelements where id_element=':id_element' ";	
 		$params= array('id_element'=>$id_element);
 		$result= $db->query($query,$params) or codeerror('DB error',__FILE__,__LINE__);
@@ -654,7 +734,7 @@ if ($do=='editgraph') {
 	
 	//prep
 	$do=     'editgraph2';
-	$backto= $id_element ? "setup.php?do=graph&amp;id_element=$id_element" : 'setup.php';
+	$backto= $id_element ? "setup.php?do=graph&amp;id_element=$id_element" : "setup.php?do=config&amp;id_view=$id_view";
 	
 	//assemble form
 	$bodyinsert="
@@ -713,6 +793,7 @@ if ($do=='editgraph') {
 				</div>
 				<div class='buttons'>
 					<input type='hidden' name='do' value='$do' />
+					<input type='hidden' name='id_view' value='$id_view' />
 					<input type='hidden' name='id_element' value='$id_element' />
 					<input type='button' value='Cancel'  onClick=\"document.location.href='$backto';\"  />
 					<input type='submit' value='OK' />
@@ -734,6 +815,9 @@ if ($do=='editgraph') {
 ###############################################
 
 if ($do=='graph') {
+
+	if (!$id_view)    die('Invalid id '.__LINE__);
+	if (!$id_element) die('Invalid id '.__LINE__);
 
 	//get element
 	$query= "
@@ -784,7 +868,7 @@ if ($do=='graph') {
 	else $series_insert= 'None';
 
 	//build output
-	$backto='setup.php';
+	$backto= "setup.php?do=config&amp;id_view=$id_view";
 	
 	$output="
 		<h3 class='section'>Graph - <a href='setup.php?do=editgraph&amp;id_element=$id_element'>Edit</a> 
@@ -817,87 +901,214 @@ if ($do=='graph') {
 	$page->render();
 }
 
-
-###  VIEW
+###  EDIT VIEW
 ###
 ###############################################
 
-$id_view= 1;
+if ($do=='editview') {
 
-//get view element names
-$panes=$panelines= array();
-$query= "
-	select * from blackboxelements
-	where id_view=':id_view'
-	order by panetag,position
-";	
-$params= array('id_view'=>$id_view);
-$result= $db->query($query,$params) or codeerror('DB error',__FILE__,__LINE__);
-while ($row= $db->fetch_row($result)) {
-	$id_element=  $row['id_element'];
-	$name=        $row['name'];
-	$panetag=     $row['panetag'];
-	$type=        $row['type'];
-	$settings=    $row['settings'];
-	
-	//hash lines per pane 
-	if (!isset($panelines[$panetag])) $panelines[$panetag]='';
-	
-	//datapts
-	if ($type=='d') {
-		$panelines[$panetag].= "
-			<div class='datapt'>
-				$name -
-				<span class='small'>
-					<a href='setup.php?do=editdatapt&amp;id_element=$id_element'>Edit</a> 
-					<a href='setup.php?do=delelement&amp;id_element=$id_element'>Del</a>
-				</span>
-			</div>
-		";
-	}
-	//graphs
+	//if valid proceed
+	if ($form->errors) $do='setup.php';
 	else {
-		$settings= unserialize($settings);
-		$series_insert='';
-		if (isset($settings['datapts'])){	
-			foreach ($settings['datapts'] as $series=> $bla) {
-				$series_insert.= "&nbsp&nbsp;".$settings['datapts'][$series]['name']."<br/>\n";
-			}		
+	
+		//insert if new
+		if (!isgoodid($id_view)) {
+			$query= "
+				insert into blackboxviews set
+				position= (select max(v.position)+1 from blackboxviews v)
+			";	
+			$db->query($query) or codeerror('DB error',__FILE__,__LINE__);
+			$id_view= $db->insert_id();
 		}
-		$panelines[$panetag].= "
-			<div class='graph'>
-				$name - <a class='small' href='setup.php?do=graph&amp;id_element=$id_element'>Configure</a>
-				<br/>
-				<span class='small'>$series_insert</span>
-			</div>
-		";
 	}
 }
 
-//build element columns by pane
-$head=$tbody='';
-foreach ($panetags as $panetag) {
-	if (!isset($panelines[$panetag])) continue; 
-	$lines= isset($panelines[$panetag]) ? $panelines[$panetag] : '';
-	$head.= "<th><h3>$panetag</h3></th>";
-	$tbody.="<td>$lines</td>";
+###  DEL VIEW
+###
+###############################################
+
+if ($do=='delview2') {
+
+	if (!$id_view) die('Invalid id '.__LINE__);
+
+	$query= "delete from blackboxviews where id_view=':id_view'	";	
+	$params= array('id_view'=>$id_view);
+	$db->query($query,$params) or codeerror('DB error',__FILE__,__LINE__);
+	$query= "delete from blackboxelements where id_view=':id_view'	";	
+	$params= array('id_view'=>$id_view);
+	$db->query($query,$params) or codeerror('DB error',__FILE__,__LINE__);
+
+	$id_view= 0; $do='';
 }
+
+if ($do=='delview') {
+
+	if (!$id_view) die('Invalid id '.__LINE__);
+	
+	$doins='delview2';
+	$backto='setup.php';
+	
+	//Display page
+	$page->tags['PageTitle']=  'Setup';
+	$page->tags['Body']=	"
+		<form action='setup.php' method='post'>
+			<fieldset>
+				<legend>Confirm deletion</legend>
+				<div class='row'>
+					Are you sure that you want to delete view $id_view?
+				</div>
+				<div class='buttons'>
+					<input type='hidden' name='do' value='$doins' />
+					<input type='hidden' name='id_element' value='$id_element' />
+					<input type='hidden' name='series'     value='$series' />
+					<input type='button' value='Cancel'  onClick=\"document.location.href='$backto';\"  />
+					<input type='submit' value='OK' />
+				</div>
+			</fieldset>
+		</form>
+	";
+	$page->render();
+}
+
+
+###  CONFIG VIEW
+###
+###############################################
+
+if ($do=='config') {
+
+	if (!$id_view) die('Invalid id '.__LINE__);
+	
+	//get view elements
+	$panelines= array();
+	$query= "
+		select * from blackboxelements
+		where id_view=':id_view'
+		order by panetag,position
+	";	
+	$params= array('id_view'=>$id_view);
+	$result= $db->query($query,$params) or codeerror('DB error',__FILE__,__LINE__);
+	while ($row= $db->fetch_row($result)) {
+		$id_element=  $row['id_element'];
+		$name=        $row['name'];
+		$panetag=     $row['panetag'];
+		$type=        $row['type'];
+		$settings=    $row['settings'];
+
+		//hash lines per pane 
+		if (!isset($panelines[$panetag])) $panelines[$panetag]='';
+
+		//datapts
+		if ($type=='d') {
+			$panelines[$panetag].= "
+				<div class='datapt'>
+					$name -
+					<span class='small'>
+						<a href='setup.php?do=editdatapt&amp;id_element=$id_element'>Edit</a> 
+						<a href='setup.php?do=delelement&amp;id_element=$id_element'>Del</a>
+					</span>
+				</div>
+			";
+		}
+		//graphs
+		else {
+			$settings= unserialize($settings);
+			$series_insert='';
+			if (isset($settings['datapts'])){	
+				foreach ($settings['datapts'] as $series=> $bla) {
+					$series_insert.= "&nbsp&nbsp;".$settings['datapts'][$series]['name']."<br/>\n";
+				}		
+			}
+			$panelines[$panetag].= "
+				<div class='graph'>
+					$name - <a class='small' href='setup.php?do=graph&amp;id_element=$id_element'>Configure</a>
+					<br/>
+					<span class='small'>$series_insert</span>
+				</div>
+			";
+		}
+	}
+
+	//build element columns by pane
+	$head=$tbody='';
+	foreach ($panetags as $panetag) {
+		if (!isset($panelines[$panetag])) continue; 
+		$lines= isset($panelines[$panetag]) ? $panelines[$panetag] : '';
+		$head.= "<th><h3>$panetag</h3></th>";
+		$tbody.="<td>$lines</td>";
+	}
+
+	//Display page
+	$page->tags['PageTitle']=  'Setup';
+	$page->tags['LeftSidebar']=  "
+		<p style='font-style:italic;'>
+			Place datapoint and/or graph elements into the View template panes. 
+		</p>
+	";
+	$page->tags['Body']=	"
+		<table style='clear:right;margin-bottom:15px' class='wtab'>
+			<tr>$head</tr>
+			<tr>$tbody</tr>
+		</table>
+		<input type='button' value='Add datapt' onClick=\"document.location.href='setup.php?do=editdatapt&amp;id_view=$id_view';\"  />
+		<input type='button' value='Add graph' onClick=\"document.location.href='setup.php?do=editgraph&amp;id_view=$id_view';\"  />
+	";
+	$page->render();
+
+}
+
+
+###  VIEWS
+###
+###############################################
+
+//view listing
+$panelines= array();
+$query= "
+	select * from blackboxviews
+	order by id_view
+";	
+$result= $db->query($query) or codeerror('DB error',__FILE__,__LINE__);
+$views_insert='';
+while ($row= $db->fetch_row($result)) {
+	$id_view=     $row['id_view'];
+	$views_insert.="
+		<div>
+			View $id_view - 
+			<a href='setup.php?do=config&amp;id_view=$id_view'>Config</a>
+			<a href='setup.php?do=delview&amp;id_view=$id_view'>Del</a>
+		</div>
+	";
+}
+
+//module listing
+$mods_insert='';
+foreach ($modules	as $mod=> $module) {
+	$ndps= count($module->datapoints);
+	$mods_insert.=	"<div>$module->name ($ndps dps)</div>"; 
+}
+
 
 //Display page
 $page->tags['PageTitle']=  'Setup';
 $page->tags['LeftSidebar']=  "
 	<p style='font-style:italic;'>
-		Place datapoint and/or graph elements into the View template panes. 
+		A view is a visualisation of module data. Add a view, or configure views to manage the view elements.  
 	</p>
-	<a href='setup.php?do=checkdb'>Check db</a>
 ";
 $page->tags['Body']=	"
-	<table style='clear:right;margin-bottom:5px' class='wborder autohide'>
-		<tr>$head</tr>
-		<tr>$tbody</tr>
+	<table style='width:100%' class='wtab'>
+		<tr>
+			<td style='width:50%'>
+				<h3>Views - <a href='setup.php?do=editview'>Add</a></h3>
+				$views_insert 
+			</td>
+			<td style='width:50%'>
+				<h3>Modules - <a href='setup.php?do=checkdb'>Check db</a></h3>
+				$mods_insert 
+			</td>
+		</tr>
 	</table>
-	<input type='button' value='Add datapt'  onClick=\"document.location.href='setup.php?do=editdatapt';\"  />
-	<input type='button' value='Add graph'  onClick=\"document.location.href='setup.php?do=editgraph';\"  />
 ";
 $page->render();
 

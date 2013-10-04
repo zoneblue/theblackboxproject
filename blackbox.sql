@@ -33,6 +33,7 @@ create table blackboxelements (
 	position     tinyint unsigned not null
 );
 
+INSERT INTO blackboxviews SET `id_view`='1',`position`='1';
 
 # these arent necessary but will get a the default view running until the default self populates
 

@@ -1,0 +1,49 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+	<title>{PageTitle}</title>
+	<link rel="stylesheet" type="text/css" href="templates/css/common.css" />
+	<style type='text/css'>
+		body { margin:0;padding:0;background:#fff url(templates/imgs/bg-view2.png) no-repeat top left;}
+		div.abs { position:absolute; }
+
+		div.vbat {left:270px; top:365px; width:175px; text-align:center; }
+		div.vpv  {left:65px;  top:35px;  width:95px; text-align:center;}
+		div.ipv  {left:145px; top:120px;  width:95px; text-align:center;}
+		div.cc   {left:410px; top:45px;  width:175px; text-align:left;}
+		div.load {left:535px; top:310px; width:150px; text-align:center;}
+		div.icc  {left:265px; top:211px; width:80px; text-align:right;}
+		div.ibat {left:265px; top:290px; width:80px; text-align:right;}
+		div.iload{left:390px; top:235px; width:80px; text-align:left;}
+		div.foot {left:5px;   top:420px; width:80px; text-align:left;}
+
+		div.large         {}
+		div.large span.h  { display:none;  }
+		div.large span.v  { font-size:40px; font-weight:bold; text-transform:uppercase;}
+		div.large span.u  { font-size:40px; color:#000; font-weight:bold;}
+
+		div.medium        {}
+		div.medium span.h { display:none;  }
+		div.medium span.v { font-size:24px; font-weight:bold; text-transform:uppercase; margin-left:0.1em;}
+		div.medium span.u { font-size:24px; color:#000;font-weight:bold;}
+
+		div.small         {}
+		div.small span.h  { display:none;  }
+		div.small span.v  { font-size:13px; font-weight:bold;  margin-left:0.3em;}
+		div.small span.u  { font-size:13px; color:#000;font-weight:bold;}
+	</style>
+	{ExtraHeaders}
+</head>
+
+<body>
+	<div class='abs vbat' >{Pane::Vbat}</div>
+	<div class='abs vpv'  >{Pane::Vpv}</div>
+	<div class='abs ipv'  >{Pane::Ipv}</div>
+	<div class='abs cc'   >{Pane::Cc}</div>
+	<div class='abs load' >{Pane::Load}</div>
+	<div class='abs icc'  >{Pane::Icc}</div>
+	<div class='abs ibat' >{Pane::Ibat}</div>
+	<div class='abs iload'>{Pane::Iload}</div>
+	<div class='abs foot' >{Foot}</div>
+</body>
+</html>

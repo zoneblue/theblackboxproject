@@ -23,8 +23,11 @@ include('init.php');
 //additional config
 $REFRESH_RATE= 60; //seconds
 
+//get view
+$id_view=  getpost('id_view');
+
 //create page from view template
-$page= new Page('template-view.html');
+$page= new Page("template-view$id_view.html");
 
 //get all modules with todays data preloaded
 $blackbox= new Blackbox(true);
@@ -32,10 +35,6 @@ $modules= $blackbox->modules;
 
 
 ### Build page
-
-//get view
-//there will be multiple definable views, i guess
-$id_view= 1;
 
 //get elements
 $query= "
@@ -100,11 +99,12 @@ $pdump= $profiler->dump();
 ### Display page
 
 $page->tags['PageTitle']=     'Power System Monitor';
-$page->tags['ExtraHeaders']=  "<meta http-equiv=\"Refresh\" content=\"$REFRESH_RATE; url=index.php\" />\n";
+$page->tags['ExtraHeaders']=  "<meta http-equiv=\"Refresh\" content=\"$REFRESH_RATE; url=index.php?id_view=$id_view\" />\n";
 $page->tags['Foot']=          "
-	<p><a href='setup.php'>Setup</a></p>
-	<p style='margin-top:3em;color:#666;font-size:9px;line-height:15px'>$pdump</p>
+	<p><a href='setup.php?do=config&amp;id_view=$id_view'>Setup</a></p>
 ";
+$page->tags['Profiler']=   "<p style='margin-top:3em;color:#666;font-size:9px;line-height:15px'>$pdump</p>";
+
 $page->render();
 
 ?>

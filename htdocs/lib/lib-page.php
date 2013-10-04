@@ -8,29 +8,33 @@ class Page {
 	protected $templ_dir;
 
 	public function __construct ($template) {
+		$template=basename($template);
 		if (!$template)  $template= 'template1.html';
 		$this->templ_dir= dirname(__FILE__).'/../templates';
 		$this->template= $template;
 	}
 	
-	function find_tags(){
-
-		//get template html
-		$template= basename($this->template);
-		if ($template and file_exists("{$this->$templ_dir}/$template")) $templatehtml= join('',file($templatefile));
-		else   return false;
-			
-		//preg to get tags
-		$tags= array();
-		if (preg_match_all("/\{(\w+(?:\:\:\w+))\}/s",$templatehtml,$m)){
-			return $m[1];
-		}
-		else return false;
+	public function set_template($template) {
+		$this->template= basename($template);
 	}
 	
-	public function set_template($template) {
-		$this->template= $template;
+	public function find_tags($template=''){
+		if (!$template) $template= $this->template;
+		
+		//get template html
+		$templatefile= $this->templ_dir.'/'.$template;
+		if ($this->template and file_exists($templatefile)) {
+			$templatehtml= join('',file($templatefile));
+			
+			//preg to get tags
+			if (preg_match_all("/\{([a-z]+(?:\:\:[a-z]+)?)\}/i",$templatehtml,$m)){
+				return $m[1];
+			}
+			else return false;
+		}		
+		else   return false;
 	}
+	
 	
 	
 	// RENDER is the fn used to render final html pages
@@ -39,7 +43,7 @@ class Page {
 	// template is the filename sans path of the template html file
 	// tags may only contain \w characters and are case sensitive
 
-	function render($page=array(),$template=''){
+	public function render($page=array(),$template=''){
 
 		$page= array_merge($this->tags,$page);
 		if ($template) $this->template= $template;
@@ -84,7 +88,7 @@ class Page {
 	// does a token job of re indenting xhtml, without being a full blown tree parser
 	// it wont break tags on one line
 
-	function htmltidy($wk){
+	protected function htmltidy($wk){
 		//avoid borking newlines in form fields 
 		$wk= $this->fixtextareanewlines($wk);
 
@@ -116,7 +120,7 @@ class Page {
 	}
 
 	// used to fix the tabulation that html tidy would impart on textarea content
-	function textareafriendly($wk){
+	protected function textareafriendly($wk){
 		$wk= preg_replace("/\x0d\x0a/","&#10;",$wk);
 		$wk= preg_replace("/\x0d/","&#10;",$wk);
 		$wk= preg_replace("/\x0a/","&#10;",$wk);
@@ -124,7 +128,7 @@ class Page {
 	}
 
 	//converts \n within a textarea value into &#10 to maintain htmltidy integrity
-	function fixtextareanewlines($wk){
+	protected function fixtextareanewlines($wk){
 		$tail=" $wk "; //needs 1 char either side
 		$wk='';
 		while (preg_match("/^(.+?)(< *textarea.+?textarea *>)(.+)$/s",$tail,$m)){	 
