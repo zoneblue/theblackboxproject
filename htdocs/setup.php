@@ -161,7 +161,7 @@ if ($do=='fixdb') {
 		<h2>Database setup</h2>
 		<p>All good.</p>
 		<div class='buttons'>
-			<input type='button' value='Proceed'  onClick=\"document.location.href='$backto';\"  />
+			<input type='button' value='Close'  onClick=\"document.location.href='$backto';\"  />
 		</div>
 	";
 	$page->render();
@@ -212,6 +212,8 @@ if ($do=='delelement') {
 	$query= "delete from blackboxelements where id_element= ':id_element' ";	
 	$params= array('id_element'=>$id_element);
 	$db->query($query,$params) or codeerror('DB error',__FILE__,__LINE__);
+	$id_element=0;
+	$do='config';
 }
 
 
@@ -1021,7 +1023,7 @@ if ($do=='config') {
 			}
 			$panelines[$panetag].= "
 				<div class='graph'>
-					$name - <a class='small' href='setup.php?do=graph&amp;id_element=$id_element'>Configure</a>
+					$name - <a class='small' href='setup.php?do=graph&amp;id_element=$id_element'>Options</a>
 					<br/>
 					<span class='small'>$series_insert</span>
 				</div>

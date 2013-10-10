@@ -25,6 +25,9 @@ $REFRESH_RATE= 60; //seconds
 
 //get view
 $id_view=  getpost('id_view');
+$id_view= $id_view ? $id_view  :1;
+
+
 
 //create page from view template
 $page= new Page("template-view$id_view.html");

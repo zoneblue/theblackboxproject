@@ -3,7 +3,7 @@
 /** 
  *  INSOLATION-MODEL
  *
- *  Thsi module calcualtes theoretical values for insolation and solar related computed datapoints. 
+ *  Thsi module calculates theoretical values for insolation and sun related datapoints. 
  *  All care no responsibility, use at your own risk. 
  * 
  *  @revision $Rev$
@@ -20,7 +20,6 @@ require("lib-solcalc.php");
 
 class insolation_model extends Module  {
 	
-	protected $defns;
 	
 	/**
 	 * DEFINE_DATAPOINTS
@@ -36,7 +35,7 @@ class insolation_model extends Module  {
 		$defns= array();
 		$order=1;
 		
-		//time and date, have to go somewhere may as well be here
+		//time and date, have to go somewhere, may as well be here
 		$defns['date']= array(
 			'name'=>       'Date',
 			'type'=>       'derived',
@@ -59,17 +58,17 @@ class insolation_model extends Module  {
 			'argument'=>   'H:i', 
 			'comment'=>    'Current local time',
 			'priority'=>   3,
-			'unit'=>       'hrs',
+			'unit'=>       '',
 			'order'=>      $order++,
 		);
 		
 		//points that change only daily
 		$defns['solnoon']= array(
 			'name'=>       'Solar Noon',
-			'type'=>       'computed',
-			'store'=>      false,
+			'type'=>       'sampled',
+			'store'=>      true,
 			'interval'=>   'day',
-			'method'=>     'get_sun',
+			'method'=>     'get_solcalc',
 			'argument'=>   'noon', 
 			'comment'=>    'Local solar noon, depends mainly on where you are in your timezone',
 			'priority'=>   3,
@@ -79,10 +78,10 @@ class insolation_model extends Module  {
 
 		$defns['sunrise']= array(
 			'name'=>       'Sunrise',
-			'type'=>       'computed',
-			'store'=>      false,
+			'type'=>       'sampled',
+			'store'=>      true,
 			'interval'=>   'day',
-			'method'=>     'get_sun',
+			'method'=>     'get_solcalc',
 			'argument'=>   'rise', 
 			'comment'=>    'Civil sunrise, local time',
 			'priority'=>   3,
@@ -92,10 +91,10 @@ class insolation_model extends Module  {
 		
 		$defns['sunset']= array(
 			'name'=>       'Sunset',
-			'type'=>       'computed',
-			'store'=>      false,
+			'type'=>       'sampled',
+			'store'=>      true,
 			'interval'=>   'day',
-			'method'=>     'get_sun',
+			'method'=>     'get_solcalc',
 			'argument'=>   'set', 
 			'comment'=>    'Civil sunset, local time',
 			'priority'=>   3,
@@ -104,12 +103,12 @@ class insolation_model extends Module  {
 		);
 		
 		//base solar stats
-		$defns['azimuth']= array(
+		$defns['az']= array(
 			'name'=>       'Solar Azimuth',
-			'type'=>       'computed',
-			'store'=>      false,
+			'type'=>       'sampled',
+			'store'=>      true,
 			'interval'=>   'periodic',
-			'method'=>     'get_sun',
+			'method'=>     'get_solcalc',
 			'argument'=>   'az', 
 			'comment'=>    'current sun angle from 0 degree true north',
 			'priority'=>   3,
@@ -117,12 +116,12 @@ class insolation_model extends Module  {
 			'order'=>      $order++,
 		);
 		
-		$defns['zenith']= array(
+		$defns['ze']= array(
 			'name'=>       'Solar Zenith',
-			'type'=>       'computed',
-			'store'=>      false,
+			'type'=>       'sampled',
+			'store'=>      true,
 			'interval'=>   'periodic',
-			'method'=>     'get_sun',
+			'method'=>     'get_solcalc',
 			'argument'=>   'ze', 
 			'comment'=>    'current sun angle from vertical',
 			'priority'=>   3,
@@ -133,12 +132,12 @@ class insolation_model extends Module  {
 		//models
 		$defns['power1']= array(
 			'name'=>       'Model Power 1',
-			'type'=>       'computed',
-			'store'=>      false,
+			'type'=>       'derived',
+			'store'=>      true, 
 			'interval'=>   'periodic',
 			'method'=>     'get_sun',
 			'argument'=>   'power1', 
-			'comment'=>    'Model array energy. Calculated via noa and pv education algos',
+			'comment'=>    'Model array energy. Calculated via noaa and pveducation algos',
 			'priority'=>   3,
 			'unit'=>       'W',
 			'order'=>      $order++,
@@ -146,7 +145,7 @@ class insolation_model extends Module  {
 		
 		$defns['power2']= array(
 			'name'=>       'Model Power 2',
-			'type'=>       'computed',
+			'type'=>       'derived',
 			'store'=>      false,
 			'interval'=>   'periodic',
 			'method'=>     'get_sun',
@@ -160,12 +159,12 @@ class insolation_model extends Module  {
 		//factors
 		$defns['am']= array(
 			'name'=>       'Air mass',
-			'type'=>       'computed',
-			'store'=>      false,
+			'type'=>       'sampled',
+			'store'=>      true,
 			'interval'=>   'periodic',
-			'method'=>     'get_sun',
+			'method'=>     'get_solcalc',
 			'argument'=>   'am', 
-			'comment'=>    'Measure of how the atmospheric thickness reduces insolation depending on sun angle',
+			'comment'=>    'Measure of how the atmospheric thickness reduces insolation depending on sun elevation',
 			'priority'=>   3,
 			'unit'=>       '',
 			'order'=>      $order++,
@@ -173,7 +172,7 @@ class insolation_model extends Module  {
 		
 		$defns['amf']= array(
 			'name'=>       'Airmass factor',
-			'type'=>       'computed',
+			'type'=>       'derived',
 			'store'=>      false,
 			'interval'=>   'periodic',
 			'method'=>     'get_sun',
@@ -187,10 +186,10 @@ class insolation_model extends Module  {
 		//computed wrt array
 		$defns['aoi']= array(
 			'name'=>       'Angle of Incidence',
-			'type'=>       'computed',
-			'store'=>      false,
+			'type'=>       'sampled',
+			'store'=>      true,
 			'interval'=>   'periodic',
-			'method'=>     'get_sun',
+			'method'=>     'get_solcalc',
 			'argument'=>   'aoi', 
 			'comment'=>    'The single vector angle that the sun hits the array',
 			'priority'=>   3,
@@ -200,12 +199,12 @@ class insolation_model extends Module  {
 		
 		$defns['aoif']= array(
 			'name'=>       'Angle of Incidence Factor',
-			'type'=>       'computed',
+			'type'=>       'derived',
 			'store'=>      false,
 			'interval'=>   'periodic',
 			'method'=>     'get_sun',
 			'argument'=>   'aoif', 
-			'comment'=>    'The percentage solar energy is reduced by aio',
+			'comment'=>    'The percentage solar energy is reduced by AOI',
 			'priority'=>   3,
 			'unit'=>       '%',
 			'order'=>      $order++,
@@ -213,7 +212,7 @@ class insolation_model extends Module  {
 		
 		$defns['eef']= array(
 			'name'=>       'Eccentricity factor',
-			'type'=>       'computed',
+			'type'=>       'derived',
 			'store'=>      false,
 			'interval'=>   'day',
 			'method'=>     'get_sun',
@@ -228,7 +227,7 @@ class insolation_model extends Module  {
 		foreach($this->settings as $k=>$v) {
 			if (substr($k,0,3)<>"pv_") continue;
 			$defns[$k]= array(
-				'name'=>       $k,
+				'name'=>       ucwords(str_replace('_',' ',$k)),
 				'type'=>       'derived',
 				'store'=>      false,
 				'interval'=>   'day',
@@ -240,13 +239,98 @@ class insolation_model extends Module  {
 				'order'=>      $order++,
 			);
 		}
-		
-		$this->defns= $defns;//so compute can use them
 
 		return $defns;
 	}
 
 
+
+	/**
+	 * READ_DEVICE
+	 * non device
+	 * calc the base solar stats, temporily store in this->stats 
+	 * the diff betw sampled and derived is a bit arbitrary 
+	 *  
+	 * @args    nil 
+	 * @return (bool) success
+	 *
+	 **/
+	 
+	protected function read_device() {
+
+		$dtime= $this->datetime;
+		
+		//use the noaa lib to get core solar position and solar times
+		$lat=     $this->settings['pv_latitude'];
+		$long=    $this->settings['pv_longtitude'];
+		$alt=     $this->settings['pv_altitude'];
+		$pv_tilt= $this->settings['pv_tilt'];
+		$pv_az=   $this->settings['pv_azimith'];
+		
+		$sun= new Solcalc;
+		$stats=  $sun->calculate($lat,$long,$dtime);
+
+		$ze= $stats['ze'];
+		$az= $stats['az'];
+		
+		//calc airmass
+		$stats['am']=  1/cos(deg2rad($ze));
+		$stats['am']=  $stats['am']>0 ? number_format($stats['am'],2) : 999; //algo goes breifly negative below the horizon
+		
+		//calc angle of incidence, arbitrary angle to arbitrary plane
+		$stats['aoi']=  rad2deg(acos( cos(deg2rad(90-$ze))*sin(deg2rad($pv_tilt))*cos(deg2rad($az-$pv_az))+sin(deg2rad(90-$ze))*cos(deg2rad($pv_tilt)) ));
+		$stats['aoi']=  $stats['aoi']<90 ? number_format($stats['aoi'],2) : 90; //sun behind panel
+		
+		return $stats;
+	}
+	
+
+
+	#===================================================================================================================
+	#  DERIVATIVES
+	#===================================================================================================================
+
+	
+	/**
+	 * GET_SUN
+	 * gets sun dp
+	 * 
+	 * @args (string) key 
+	 * @return (string) val
+	 *
+	 **/
+	 
+	protected function get_sun($arg) {
+		
+		$alt=     $this->settings['pv_altitude'];
+		$tz=      $this->settings['pv_timezone'];
+		$pv_stc=  $this->settings['pv_watts_peak'];
+		
+		//use insolation model ported from javascript at pveducation.org
+		$data= array();
+		foreach ($this->datetimes['periodic'] as $n=> $dtime) {
+			
+			$az=  (float)$this->datapoints['az']->data[$n];
+			$ze=  (float)$this->datapoints['ze']->data[$n];
+			$am=  (float)$this->datapoints['am']->data[$n];
+			$aoi= (float)$this->datapoints['aoi']->data[$n];
+
+			//calc airmass reduction factor, a bit rough
+			//aoif is ok, except doesnt factor in reflectance
+			if ($arg=='amf'  or $arg=='power1') $amf=  1.1*1.353*pow(0.7,pow($am,0.678));
+			if ($arg=='aoif' or $arg=='power1') $aoif= cos(deg2rad($aoi));
+			
+			if     ($arg=='eef')     $data[$n]= 0;
+			elseif ($arg=='power2')  $data[$n]= 0;
+			elseif ($arg=='amf')     $data[$n]= round($amf,3); 
+			elseif ($arg=='aoif')    $data[$n]= round($aoif,3);
+			elseif ($arg=='power1')  $data[$n]= round($pv_stc * $aoif * $amf,0);
+		}
+		
+		return $data;
+	}
+	
+	
 	/**
 	 * GET_PV_SETTING
 	 * converts a setting to dp value, maybe add a fixed type
@@ -262,99 +346,6 @@ class insolation_model extends Module  {
 
 
 	/**
-	 * READ_DEVICE
-	 * non device
-	 *  
-	 * @args    nil 
-	 * @return (bool) success
-	 *
-	 **/
-	 
-	protected function read_device() {
-		return true;
-	}
-
-	
-	/**
-	 * COMPUTE
-	 * calc the base dps for all periodic times, run once prior to each dp calc_deriv
-	 * temp store in this->stats 
-	 *  
-	 * @args   nil 
-	 * @return (array)  dp data
-	 *
-	 **/
-	
-	protected function compute() {
-	
-		//use the noa lib
-		$lat=     $this->settings['pv_latitude'];
-		$long=    $this->settings['pv_longtitude'];
-		$sun= new Solcalc;
-		
-		//get day to date for all dps
-		$data= array();
-		foreach ($this->datetimes['periodic'] as $n=>$dtime) {
-			$stats=  $sun->calculate($lat,$long,$dtime);
-			$stats2= $this->get_model1($dtime, $stats['az'], $stats['el']);
-			$stats= array_merge($stats,$stats2);
-			
-			foreach ($this->defns as $label=> $defn) {
-				if ($defn['method']<>'get_sun') continue;
-				$l= $defn['argument'];
-				$value= isset($stats[$l]) ? $stats[$l] : '';
-				
-				if ($defn['interval']=='periodic') $data[$label][$n]= $value;
-				else                               $data[$label]= $value;
-			}
-		}
-		
-		return $data;
-	}
-	
-	
-	
-	//insolation model ported from javascript at pveducation.org
-	protected function get_model1($dtime, $az, $el) {
-
-		//get settings
-		$lat=     $this->settings['pv_latitude'];
-		$long=    $this->settings['pv_longtitude'];
-		$alt=     $this->settings['pv_altitude'];
-		$tz=      $this->settings['pv_timezone'];
-		$pv_tilt= $this->settings['pv_tilt'];
-		$pv_az=   $this->settings['pv_azimith'];
-		$pv_stc=  $this->settings['pv_watts_peak'];
-
-		//calc airmass and airmass reduction factor
-		//these formulas are a bit rough
-		$am=  1/cos(deg2rad(90-$el));
-		$amf= $am>0 ? 1.1*1.353* pow(0.7,pow($am,0.678)): 0; 
-		
-		//calc angle of incidence, arbitrary angle to arbitrary plane
-		$aoif=  cos(deg2rad($el))* sin(deg2rad($pv_tilt))*  cos(deg2rad($az-$pv_az)) + sin(deg2rad($el))* cos(deg2rad($pv_tilt));
-		$aoi=   rad2deg(acos($aoif));	
-		
-		$stats= array();
-		$stats['aoi']=   $aoi > 90 ? '90+' : round($aoi);
-		$stats['aoif']=  $aoif;
-		$stats['am']=    $am>0 ? round($am,1) : '0';
-		$stats['amf']=   $amf;
-		$stats['eef']=   0;
-		$stats['power1']=   (round($pv_stc * $aoif * $amf));
-		
-		return $stats;
-	}
-	
-
-
-
-	#===================================================================================================================
-	#  DERIVATIVES
-	#===================================================================================================================
-
-	
-	/**
 	 * GET_DATE
 	 * gets /current/ date as a dp
 	 * 
@@ -367,8 +358,11 @@ class insolation_model extends Module  {
 		return date($arg);
 	}
 
+
+	
 	//class ends
 }
+			
 
 
 

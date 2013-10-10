@@ -9,7 +9,7 @@
  *  
  *  
  *  Contents: 
- *
+ *  ---------
  *  1. Class Blackbox  
  *  2. Class Module
  *  3. Class Datapoint
@@ -56,8 +56,18 @@ class Blackbox {
 			//load the datapoints data if requested
 			if ($incldata)  $this->modules[$modname]->load_data();
 			
-			$profiler->add('Blackbox constructor ends');
 		}
+		
+		//order modules
+		function modulesort($a,$b) {
+			$a1= $a->order;
+			$b1= $b->order;
+			if ($a1==$b1) return 0;
+			else  return ($a1>$b1);
+		}
+		uasort($this->modules,'modulesort');
+		
+		$profiler->add('Blackbox constructor ends');
 	}
 	
 	
@@ -71,8 +81,10 @@ class Blackbox {
 	 **/
 	 
 	public function process_modules() {
+		$profiler= $GLOBALS['profiler'];
 		foreach ($this->modules as $mod=>$module) {
 			$module->process_device();
+			$profiler->add("Module $module->name processed");
 		}		
 	}
 	
@@ -281,6 +293,7 @@ class Blackbox {
 abstract class Module {
 	
 	public    $name=     '';
+	public    $order=     0;
 	protected $datetime= '';          //date of dataset presently held
 	
 	protected $settings=     array();
@@ -291,12 +304,11 @@ abstract class Module {
 	protected $dbase_has_been_checked=  false; 
 	protected $device_has_been_read=    false; //flags to prevent multiple calls
 	protected $dbase_has_been_read=     false; 
-	protected $has_been_computed=       false;
 
 	protected $debug= false;
 	protected $code= 0;
-	protected $db;
 	protected $profiler;
+	protected $db;
 
 	
 	/**
@@ -322,7 +334,8 @@ abstract class Module {
 		if (!file_exists($config)) die("Module $modlabel config not found - $config");
 		include($config);
 		$this->settings= $set; //need to syntax test these, todo
-		$this->name= $set['module_name'];
+		$this->name=  $set['module_name'];
+		$this->order= $set['module_order'];
 		
 		//initialise the dataset date keys
 		//the datapoints hold an ordinary array,datetimes holds an ordinary array of the date keys for those arrays, make sense?
@@ -531,7 +544,6 @@ abstract class Module {
 	 **/
 	 
 	abstract protected function read_device();
-	abstract protected function compute();
 	
 	
 	/**
@@ -583,19 +595,20 @@ abstract class Module {
 		
 		//prepare periodic query
 		$query_insert=$query_insert_day='';
-		foreach ($this->datapoints as $label=> $datapoint) {
-			if ($this->code) continue;
-			if (!$datapoint->store) continue;
-			
-			$field= $db->quote($label);
-			$value= $db->quote($datapoint->current_value);
-			
-			if ($datapoint->interval=='periodic') $query_insert.=     "`$field`= '$value',\n";
-			if ($datapoint->interval=='day')      $query_insert_day.= "`$field`= '$value',\n";
+		if (!$this->code) {
+			foreach ($this->datapoints as $label=> $datapoint) {
+				if (!$datapoint->store) continue;
+
+				$field= $db->quote($label);
+				$value= $db->quote($datapoint->current_value);
+
+				if ($datapoint->interval=='periodic') $query_insert.=     "`$field`= '$value',\n";
+				if ($datapoint->interval=='day')      $query_insert_day.= "`$field`= '$value',\n";
+			}
 		}
 		
 		//write periodic
-		if ($query_insert) {
+		if ($this->code or $query_insert) {
 
 			$request= "
 				insert into `:table` set
@@ -654,41 +667,6 @@ abstract class Module {
 
 
 	/**
-	 * READ_COMPUTED
-	 * std module method
-	 * for get_data read computed dps, in hindsight this isnt gona work as it takes far too long on arm
-	 * 
-	 * @args   nil 
-	 * @return (bool) success 
-	 *
-	 **/
-	protected function read_computed() {
-	 
-		//for wholy computed modules we need to create a synthetic periodic datetime series 
-		if (!$this->datetimes['periodic']) {
-			$dtime= $this->datetime; 
-			$d= date("Y-m-d 00:06:00", strtotime($dtime));		
-			while ($d < $dtime) {
-				$this->datetimes['periodic'][]= $d;
-				$d= date("Y-m-d H:i:s", strtotime("$d +1 minute"));
-			}	
-		}
-
-		//compute
-		if (!$this->has_been_computed) $data= $this->compute();
-		$this->has_been_computed= true;
-		
-		//store
-		foreach ($this->datapoints as $label=> $datapoint) {
-			if ($datapoint->type<>'computed') continue;
-			if     ($datapoint->interval=='periodic') $datapoint->set('periodic',$data[$label]);
-			elseif ($datapoint->interval=='day')      $datapoint->set('day',$data[$label]);
-		}
-
-	}
-
-
-	/**
 	 * GET_DATETIMES
 	 * abstract module method
 	 * we store the sample record iso timestamps per module not per dp
@@ -715,14 +693,15 @@ abstract class Module {
 	 
 	public function load_data($dtime='') {
 		
-		$this->profiler->add("Module $this->name load data starts");
- 		
  		if ($dtime) $this->datetime= $dtime;
+ 		
+		$this->profiler->add("Module $this->name load data starts");
 		
-		$this->read_dbase(); 		$this->profiler->add("Module $this->name read dbase ends");
-		$this->read_computed();		$this->profiler->add("Module $this->name read computed ends");
-		$this->calc_derived();		$this->profiler->add("Module $this->name calc derived ends");
-
+		$this->read_dbase(); 		
+		$this->profiler->add("Module $this->name read dbase ends");
+		
+		$this->calc_derived();		
+		$this->profiler->add("Module $this->name calc derived ends");
 	}
 	
 	

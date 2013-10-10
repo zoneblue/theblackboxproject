@@ -169,9 +169,9 @@ class midnite_classic extends Module {
 		
 		
 		//TEMPS
-		//the most interesting is tbat
+		//the most interesting of which is tbat
 		//also present are tfet and tpcb 
-		//probably tfet is a good enough proxy for cc temp
+		//we will assume that tfet is a good enough proxy for cc temp
 		
 		$defns['tbat']= array(
 			'name'=>       "Battery Temp",
@@ -304,6 +304,7 @@ class midnite_classic extends Module {
 		//we will also derive kWh in all three states.
 		//for our derived versions well use the prefix dur for duration
 		
+		
 		$defns['ftoday']= array(
 			'name'=>       "Float Time Today",
 			'type'=>       'sampled',
@@ -328,7 +329,18 @@ class midnite_classic extends Module {
 			'priority'=>   4,
 			'order'=>      $order++,
 		);
-
+		$defns['lastfloat']= array(
+			'name'=>       "Days Since Float",
+			'type'=>       'derived',
+			'store'=>      false,
+			'interval'=>   'day',
+			'method'=>     'calc_days_since',
+			'argument'=>   'float',
+			'comment'=>    '(int) days',
+			'unit'=>       'days',
+			'priority'=>   2,
+			'order'=>      $order++,
+		);
 		$defns['durbulk']= array(
 			'name'=>       "Time in bulk",
 			'type'=>       'derived',
@@ -557,9 +569,6 @@ class midnite_classic extends Module {
 	}
 	
 
-	//unused
-	protected function compute() {}
-
 
 
 	#####################################################################################################################
@@ -636,6 +645,35 @@ class midnite_classic extends Module {
 		}
 		return $data;
 	}
+	
+	/**
+	 * CALC_DAYS_SINCE
+	 * derivation for days since float/eq, etc 
+	 * operates on the day series
+	 *  
+	 * @args   (string)  stageword 
+	 * @return (string)  value
+	 *
+	 **/
+
+	protected function calc_days_since($arg) {
+
+		$d= date("Y-m-d");
+		
+		//work backwards from today, making sure each day is present
+		$dn= 0; 
+		$n= count($this->datetimes['day'])-1;
+		while ($n>=0 and $dn < 90) {
+			if ($d==$this->datetimes['day'][$n]) {
+				if ($arg=='float' and $this->datapoints['durfloat']->day_data[$n]) break;
+				$n--;
+			}
+			$d= date("Y-m-d", strtotime("$d -1 day"));
+			$dn++;
+		}	
+		
+		return $dn;
+	}	
 	
 	
 	/**

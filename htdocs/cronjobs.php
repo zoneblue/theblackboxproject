@@ -48,7 +48,7 @@ $result= $db->query($query,$params) or codeerror('DB error',__FILE__,__LINE__);
 while ($row= $db->fetch_row($result)) {
 	$id_element=   $row['id_element'];
 	$settings=      unserialize($row['settings']);
-	make_graph($id_element,$settings,$blackbox->modules);
+	make_graph($id_element,$settings);
 }
 
 print $profiler->dump();
@@ -58,10 +58,13 @@ print $profiler->dump();
 
 
 //MAKE_GRAPH
-function make_graph($id_element,$settings,$modules) {
-
+function make_graph($id_element,$settings) {
+	
+	global $blackbox;
+	
 	$day= date("Y-m-d");
-	$records= $modules['midnite_classic']->get_datetimes('periodic'); //until minute series is fixed
+	$records= $blackbox->modules['midnite_classic']->get_datetimes('periodic'); //until minute series is fixed
+	if (!$records) return false;
 	
 	//hash the series keys
 	//to match our axis to the available data 
@@ -76,7 +79,7 @@ function make_graph($id_element,$settings,$modules) {
 	//x and y data
 	$ydata= $xdata= array();
 	$stamp= "$day 06:00:00";
-	while ($stamp <= "$day 19:00:00") {
+	while ($stamp <= "$day 20:00:00") {
 		$hr=    date("H", strtotime($stamp)); 
 		$mn=    date("i", strtotime($stamp)); 
 		$rtime= date("H:i", strtotime($stamp)); 
@@ -90,7 +93,7 @@ function make_graph($id_element,$settings,$modules) {
 			$dp=    $settings['datapts'][$series]['datapoint'];
 			$mult=  $settings['datapts'][$series]['multiplier'];
 			if (!isset($ydata[$series])) $ydata[$series]= array();
-			$ydata[$series][]= isset($hash[$rtime]) ? ($mult * $modules[$mod]->datapoints[$dp]->data[$hash[$rtime]]) : NULL;
+			$ydata[$series][]= isset($hash[$rtime]) ? ($mult * $blackbox->modules[$mod]->datapoints[$dp]->data[$hash[$rtime]]) : NULL;
 		}
 		//inc
 		$stamp= date("Y-m-d H:i:s", strtotime("$stamp +1 min"));

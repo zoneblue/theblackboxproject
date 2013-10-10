@@ -19,7 +19,9 @@ class Solcalc {
 		$sec =   date("s",$stamp);
 		$dst =   date("I",$stamp);
 		$tz =    date('Z',$stamp)/3600; 
-				
+		
+		if ($dst) $tz--; //tz will double dst otherwise
+		
 		//convert to julian time
 		$jday = $this->getJD($year,$month,$day);
 		$tl =   $this->getTimeLocal($hr,$min,$sec,$dst);
@@ -32,8 +34,8 @@ class Solcalc {
 		$this->calcSunriseSet(1, $jday, $lat, $lng, $tz, $dst);
 		$this->calcSunriseSet(0, $jday, $lat, $lng, $tz, $dst);
 		
-		//zenith is measured from vert, elevation from horo
-		$this->vars['ze']= (90-$this->vars['el']); 
+		$this->vars['az']= number_format($this->vars['az'],2);
+		$this->vars['ze']= number_format($this->vars['ze'],2);
 
 		return $this->vars;
 	}
@@ -120,11 +122,9 @@ class Solcalc {
 		//	document.getElementById("az").value = "dark"
 		//	document.getElementById("el").value = "dark"
 		//}
-		//else if (output) {
-		$this->vars['az']= floor($azimuth*100 +0.5)/100.0;
-		$this->vars['el']= floor((90.0-$solarZen)*100+0.5)/100.0;
-		//}
-		return ($azimuth);
+		
+		$this->vars['az']= $azimuth;
+		$this->vars['ze']= $solarZen;
 	}
 	
 	function calcSolNoon($jd, $longitude, $timezone, $dst){
@@ -142,7 +142,7 @@ class Solcalc {
 		while ($solNoonLocal >= 1440.0) {
 			$solNoonLocal -= 1440.0;
 		}
-		$this->vars['noon'] = $this->timeString($solNoonLocal, 3);
+		$this->vars['solnoon'] = $this->timeString($solNoonLocal, 3);
 	}
 	
 	function calcSunriseSetUTC($rise, $JD, $latitude, $longitude){
@@ -160,7 +160,7 @@ class Solcalc {
 
 	function calcSunriseSet($rise, $JD, $latitude, $longitude, $timezone, $dst) {
 		// rise = 1 for sunrise, 0 for sunset
-		$id = $rise ? "rise" : "set";
+		$id = $rise ? "sunrise" : "sunset";
 
 		$timeUTC =    $this->calcSunriseSetUTC($rise, $JD, $latitude, $longitude);
 		$newTimeUTC = $this->calcSunriseSetUTC($rise, $JD + $timeUTC/1440.0, $latitude, $longitude);
