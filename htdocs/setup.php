@@ -58,7 +58,27 @@ $multiplier= getpost('multiplier');
 ###
 ###############################################
 
-//check table - elements
+//check views table 
+$query= "show tables like 'blackboxviews'";		
+$result= $db->query($query) or codeerror('DB error',__FILE__,__LINE__);
+if (!$db->num_rows($result)) {
+	$query= "
+		create table blackboxviews (
+			id_view      int unsigned primary key auto_increment,
+			viewname     varchar(255) not null,
+			type         char(1) not null,
+			settings     text not null,
+			position     tinyint unsigned not null
+		);
+	";
+	if (!$db->query($query))  {
+		$page->tags['PageTitle'] =  'Error';
+		$page->tags['Body']=	 "Our attempt to add the views table failed. That means your database/permissions are not set right.";
+		$page->render();
+	}
+}
+
+//check elements table  
 $query= "show tables like 'blackboxelements'";		
 $result= $db->query($query) or codeerror('DB error',__FILE__,__LINE__);
 if (!$db->num_rows($result)) {
@@ -73,35 +93,13 @@ if (!$db->num_rows($result)) {
 			position     tinyint unsigned not null
 		);
 	";
-	if ($db->query($query))  {}
-	else {
-		//Display page
+	if (!$db->query($query))  {
 		$page->tags['PageTitle'] =  'Error';
 		$page->tags['Body']=	 "Our attempt to add the elements table failed. That means your database/permissions are not set right.";
 		$page->render();
 	}
 }
-//check table - elements
-$query= "show tables like 'blackboxviews'";		
-$result= $db->query($query) or codeerror('DB error',__FILE__,__LINE__);
-if (!$db->num_rows($result)) {
-	$query= "
-		create table blackboxviews (
-			id_view      int unsigned primary key auto_increment,
-			viewname     varchar(255) not null,
-			type         char(1) not null,
-			settings     text not null,
-			position     tinyint unsigned not null
-		);
-	";
-	if ($db->query($query))  {}
-	else {
-		//Display page
-		$page->tags['PageTitle'] =  'Error';
-		$page->tags['Body']=	 "Our attempt to add the elements table failed. That means your database/permissions are not set right.";
-		$page->render();
-	}
-}
+
 
 
 ###  COMMON

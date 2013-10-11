@@ -55,7 +55,6 @@ class Blackbox {
 
 			//load the datapoints data if requested
 			if ($incldata)  $this->modules[$modname]->load_data();
-			
 		}
 		
 		//order modules

@@ -11,7 +11,7 @@
  *  @revision  $Rev$
  *
  *  Cron setup, usually something along these lines
- *  * 6-17 * * * /usr/bin/php-cgi -f /home/www-data/html/blackbox/cronjobs.php >/dev/null 2>&1
+ *  * * * * * /usr/bin/php-cgi -f /home/www-data/html/blackbox/cronjobs.php >/dev/null 2>&1
  *  * * * * * /usr/bin/wget --quiet http://192.168.0.3/blackbox/cronjobs.php >/dev/null 2>&1
  *
  **/ 
@@ -25,22 +25,21 @@ ini_set('display_errors', 'off');
 
 require("init.php");
 
+$graphset['start']= "06";
+$graphset['stop']=  "20";
 
-### Read
 
-//invoke
+### Read and process the module devices
+
 $blackbox= new Blackbox();
-
-//read the module devices
 $blackbox->process_modules();
 
 
-### Generate graphs
+### Render graphs
 
 $query= "
 	select * from blackboxelements
-	where id_view=':id_view' 
-	and type='g'
+	where type='g'
 	order by panetag,position
 ";	
 $params= array('id_view'=>1);
@@ -51,8 +50,9 @@ while ($row= $db->fetch_row($result)) {
 	make_graph($id_element,$settings);
 }
 
+//all done
 print $profiler->dump();
-
+exit;
 
 
 
@@ -60,32 +60,36 @@ print $profiler->dump();
 //MAKE_GRAPH
 function make_graph($id_element,$settings) {
 	
-	global $blackbox;
+	global $blackbox,$graphset;
 	
 	$day= date("Y-m-d");
-	$records= $blackbox->modules['midnite_classic']->get_datetimes('periodic'); //until minute series is fixed
-	if (!$records) return false;
 	
-	//hash the series keys
 	//to match our axis to the available data 
+	//fish out once per minute datetimes for each module, and hash them
 	//to handle multiple points per minute, for now first one rules 
+	//missing samples use NULL
 	$hash= array();
-	foreach ($records as $n=>$datetime) {
-		$rtime= date("H:i", strtotime($datetime));
-		if (isset($hash[$rtime])) continue;
-		$hash[$rtime]= $n;
+	foreach($blackbox->modules as $mod=>$module) {
+		$records= $blackbox->modules[$mod]->get_datetimes('periodic'); //until minute series is fixed
+		if (!$records) continue;
+		$hash[$mod]= array();
+		foreach ($records as $n=>$datetime) {
+			$rtime= date("H:i", strtotime($datetime));
+			if (isset($hash[$mod][$rtime])) continue; //first one rules as its closer to the 00 mark
+			$hash[$mod][$rtime]= $n;
+		}
 	}
 	
-	//x and y data
+	//get actual data
 	$ydata= $xdata= array();
-	$stamp= "$day 06:00:00";
-	while ($stamp <= "$day 20:00:00") {
+	$stamp= "$day {$graphset['start']}:00:00";
+	while ($stamp <= "$day {$graphset['stop']}:00:00") {
 		$hr=    date("H", strtotime($stamp)); 
 		$mn=    date("i", strtotime($stamp)); 
 		$rtime= date("H:i", strtotime($stamp)); 
 		
 		//set x label
-		$xdata[]= (int)$mn ? '': (string)$hr;
+		$xdata[]= $mn<>'00' ? "$hr" : '';
 
 		//set y values
 		foreach ($settings['datapts'] as $series=>$bla) {
@@ -93,11 +97,12 @@ function make_graph($id_element,$settings) {
 			$dp=    $settings['datapts'][$series]['datapoint'];
 			$mult=  $settings['datapts'][$series]['multiplier'];
 			if (!isset($ydata[$series])) $ydata[$series]= array();
-			$ydata[$series][]= isset($hash[$rtime]) ? ($mult * $blackbox->modules[$mod]->datapoints[$dp]->data[$hash[$rtime]]) : NULL;
+			$ydata[$series][]= isset($hash[$mod][$rtime]) ? ($mult * $blackbox->modules[$mod]->datapoints[$dp]->data[$hash[$mod][$rtime]]) : NULL;
 		}
+		
 		//inc
 		$stamp= date("Y-m-d H:i:s", strtotime("$stamp +1 min"));
-	}		
+	}	
 
 	//data
 	$ymax=$ymin=1e20; $data=array();
