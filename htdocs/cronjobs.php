@@ -17,6 +17,14 @@
  **/ 
 
 
+//define sample interval (minutes)
+//bit of hack til the classic lockup issue is resolved.
+$interval= 2; // >=1
+
+//define graph x axis times (24hr time of day)
+$graphset['start']= "06";
+$graphset['stop']=  "20";
+
 
 ### Prelim
 
@@ -25,11 +33,12 @@ ini_set('display_errors', 'off');
 
 require("init.php");
 
-$graphset['start']= "06";
-$graphset['stop']=  "20";
-
 
 ### Read and process the module devices
+
+if (date('H') < $graphset['start'])  exit;
+if (date('H') >= $graphset['stop'])  exit;
+if (((int)date('i') % $interval)<>0) exit;
 
 $blackbox= new Blackbox();
 $blackbox->process_modules();
@@ -89,7 +98,7 @@ function make_graph($id_element,$settings) {
 		$rtime= date("H:i", strtotime($stamp)); 
 		
 		//set x label
-		$xdata[]= $mn<>'00' ? "$hr" : '';
+		$xdata[]= $mn=='00' ? "$hr" : '';
 
 		//set y values
 		foreach ($settings['datapts'] as $series=>$bla) {

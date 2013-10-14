@@ -24,13 +24,18 @@ include('init.php');
 $REFRESH_RATE= 60; //seconds
 
 //get view
-$id_view=  getpost('id_view');
-$id_view= $id_view ? $id_view  :1;
+$id_view=  (int)getpost('id_view');
+$id_view= $id_view ? $id_view : 1;
 
+$query= "select template from blackboxviews where id_view=':id_view' ";	
+$params= array('id_view'=>$id_view);
+$result= $db->query($query,$params) or codeerror('DB error',__FILE__,__LINE__);
+$row= $db->fetch_row($result) or die('Invalid id'.__LINE__);
+$viewtemplate= $row['template'];
 
 
 //create page from view template
-$page= new Page("template-view$id_view.html");
+$page= new Page($viewtemplate);
 
 //get all modules with todays data preloaded
 $blackbox= new Blackbox(true);

@@ -52,6 +52,9 @@ $linesmooth= getpost('linesmooth');
 $linecolor=  getpost('linecolor');
 $multiplier= getpost('multiplier');
 
+$viewname=     getpost('viewname');
+$viewtemplate= getpost('viewtemplate');
+
 
 
 ###  TABLE MAINTENANCE
@@ -66,6 +69,7 @@ if (!$db->num_rows($result)) {
 		create table blackboxviews (
 			id_view      int unsigned primary key auto_increment,
 			viewname     varchar(255) not null,
+			template     varchar(255) not null,
 			type         char(1) not null,
 			settings     text not null,
 			position     tinyint unsigned not null
@@ -118,10 +122,11 @@ if (isgoodid($id_element)) {
 else $id_element=0;
 
 if (isgoodid($id_view)) {
-	$query= "select id_view from blackboxviews where id_view=':id_view' ";	
+	$query= "select template from blackboxviews where id_view=':id_view' ";	
 	$params= array('id_view'=>$id_view);
 	$result= $db->query($query,$params) or codeerror('DB error',__FILE__,__LINE__);
 	$row= $db->fetch_row($result) or die('Invalid id'.__LINE__);
+	$viewtemplate= $row['template'];
 }
 else $id_view=0;
 
@@ -140,7 +145,7 @@ $page->tags['Nav']= "$vnav <a href='setup.php'>Setup</a> <a href='history.php'>H
 //get view tags
 $panetags= array(); 
 if ($id_view) {
-	foreach($page->find_tags("template-view$id_view.html") as $tag) {
+	foreach($page->find_tags($viewtemplate) as $tag) {
 		if (substr($tag,0,6)=="Pane::") $panetags[]= substr($tag,6);
 	}
 }
@@ -905,8 +910,10 @@ if ($do=='graph') {
 ###
 ###############################################
 
-if ($do=='editview') {
+if ($do=='editview2') {
 
+	$viewtemplate= basename($viewtemplate);
+	
 	//if valid proceed
 	if ($form->errors) $do='setup.php';
 	else {
@@ -915,13 +922,60 @@ if ($do=='editview') {
 		if (!isgoodid($id_view)) {
 			$query= "
 				insert into blackboxviews set
+				template= ':template',
+				viewname= ':viewname',
 				position= (select max(v.position)+1 from blackboxviews v)
 			";	
-			$db->query($query) or codeerror('DB error',__FILE__,__LINE__);
+			$params= array('template'=>$viewtemplate,'viewname'=>$viewname);
+			$db->query($query,$params) or codeerror('DB error',__FILE__,__LINE__);
 			$id_view= $db->insert_id();
 		}
 	}
 }
+
+if ($do=='editview') {
+
+	$doins='editview2';
+	$backto='setup.php';
+
+	$template_options='';
+	foreach (scandir("templates") as $fname) {
+		if ($fname[0]==='.' or $fname[0]==='_') continue;
+		if (!preg_match("/\.html$/",$fname)) continue;
+		if ($fname=='template-setup.html') continue;
+		$template_options.="<option value='$fname'>$fname</option>\n";
+	}
+	
+	//Display page
+	$page->tags['PageTitle']=  'Setup';
+	$page->tags['Body']=	"
+		<form action='setup.php' method='post'>
+			<fieldset>
+				<legend>Edit view</legend>
+				<div class='row'>
+					<label>Name:</label>
+					<input type='text' name='viewname' value='$viewname' /> 
+					{$form->error('viewname')}
+				</div>
+				<div class='row'>
+					<label>Template:</label>
+					<select name='viewtemplate'>
+						$template_options
+					</select>
+					{$form->error('viewtemplate')}
+				</div>
+				<div class='buttons'>
+					<input type='hidden' name='do' value='$doins' />
+					<input type='hidden' name='id_view' value='$id_view' />
+					<input type='button' value='Cancel'  onClick=\"document.location.href='$backto';\"  />
+					<input type='submit' value='OK' />
+				</div>
+			</fieldset>
+		</form>
+	";
+	$page->render();
+}
+
 
 ###  DEL VIEW
 ###
@@ -959,7 +1013,7 @@ if ($do=='delview') {
 				</div>
 				<div class='buttons'>
 					<input type='hidden' name='do' value='$doins' />
-					<input type='hidden' name='id_element' value='$id_element' />
+					<input type='hidden' name='id_view' value='$id_view' />
 					<input type='hidden' name='series'     value='$series' />
 					<input type='button' value='Cancel'  onClick=\"document.location.href='$backto';\"  />
 					<input type='submit' value='OK' />
