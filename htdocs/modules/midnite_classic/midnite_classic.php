@@ -257,7 +257,87 @@ class midnite_classic extends Module {
 			'priority'=>   2,
 			'order'=>      $order++,
 		);
+		
+		//whizbang figures
+		$defns['ibat']= array(
+			'name'=>       "Whizbang Current",
+			'type'=>       'sampled',
+			'store'=>      true,
+			'interval'=>   'periodic',
+			'method'=>     'get_register',
+			'argument'=>   'BITS([4371],15) ? (65536-[4371])/10 : [4371]/-10',
+			'comment'=>    '(decimal) +/- battery current, 1dp',
+			'unit'=>       'A',
+			'priority'=>   2,
+			'order'=>      $order++,
+		);
+		
+		$defns['ibatraw']= array(
+			'name'=>       "Whizbang Current Raw",
+			'type'=>       'sampled',
+			'store'=>      true,
+			'interval'=>   'periodic',
+			'method'=>     'get_register',
+			'argument'=>   '[4371]',    
+			'comment'=>    '(signed int) bat current',
+			'unit'=>       '',
+			'priority'=>   2,
+			'order'=>      $order++,
+		);
+		
+		$defns['iabsbat']= array(
+			'name'=>       "Battery Current Abs",
+			'type'=>       'derived',
+			'store'=>      false,
+			'interval'=>   'periodic',
+			'method'=>     'calc_load_data',
+			'argument'=>   'iabsbat',    
+			'comment'=>    '(decimal) signless battery current',
+			'unit'=>       '',
+			'priority'=>   3,
+			'order'=>      $order++,
+		);
+		
+		$defns['batstate']= array(
+			'name'=>       "Battery Current State",
+			'type'=>       'derived',
+			'store'=>      false,
+			'interval'=>   'periodic',
+			'method'=>     'calc_load_data',
+			'argument'=>   'batstate',    
+			'comment'=>    '(string) Charging/Discharging',
+			'unit'=>       '',
+			'priority'=>   3,
+			'order'=>      $order++,
+		);
 
+		$defns['iload']= array(
+			'name'=>       "Load Current",
+			'type'=>       'derived',
+			'store'=>      false,
+			'interval'=>   'periodic',
+			'method'=>     'calc_load_data',
+			'argument'=>   'iload',    
+			'comment'=>    '(decimal) load current, 1dp',
+			'unit'=>       'A',
+			'priority'=>   2,
+			'order'=>      $order++,
+		);
+
+		$defns['pload']= array(
+			'name'=>       "Load Power",
+			'type'=>       'derived',
+			'store'=>      false,
+			'interval'=>   'periodic',
+			'method'=>     'calc_load_data',
+			'argument'=>   'pload',
+			'comment'=>    '(int)',
+			'unit'=>       'W',
+			'priority'=>   2,
+			'order'=>      $order++,
+		);
+
+		//array figures
 		$defns['vpv']= array(
 			'name'=>       "PV Voltage",
 			'type'=>       'sampled',
@@ -431,6 +511,46 @@ class midnite_classic extends Module {
 			'order'=>      $order++,
 		);
 
+		//WBjr dailys
+		$defns['whload']= array(
+			'name'=>       "Wh Load",
+			'type'=>       'derived',
+			'store'=>      false,
+			'interval'=>   'periodic',
+			'method'=>     'calc_wbjr_deriv',
+			'argument'=>   'whload',    
+			'comment'=>    '(decimal) load power, 0dp',
+			'unit'=>       'Wh',
+			'priority'=>   2,
+			'order'=>      $order++,
+		);
+
+		$defns['ahcharge']= array(
+			'name'=>       "Charge Amp Hrs",
+			'type'=>       'derived',
+			'store'=>      false,
+			'interval'=>   'periodic',
+			'method'=>     'calc_wbjr_deriv',
+			'argument'=>   'ahcharge',    
+			'comment'=>    '(decimal) amp hours into battery today, 1dp',
+			'unit'=>       'Ah',
+			'priority'=>   2,
+			'order'=>      $order++,
+		);
+
+		$defns['ahdischarge']= array(
+			'name'=>       "Discharge  Amp Hrs",
+			'type'=>       'derived',
+			'store'=>      false,
+			'interval'=>   'periodic',
+			'method'=>     'calc_wbjr_deriv',
+			'argument'=>   'ahdischarge',    
+			'comment'=>    '(decimal) amp hours out of battery today, 1dp',
+			'unit'=>       'Ah',
+			'priority'=>   2,
+			'order'=>      $order++,
+		);
+
 
 		//DAILY PEAKS AND DIPS
 		//primarily we are interested in peak pout, peak iout, vbat high and low.
@@ -512,7 +632,7 @@ class midnite_classic extends Module {
 		
 		//invoke the binary and parse the results
 		if ($this->debug) print "\nInvoke binary: $dir/$binary $ip";
-		exec("$dir/$binary $ip 16385-16390 4101-4340", $lines,$ret);
+		exec("$dir/$binary $ip 16385-16390 4101-4375", $lines,$ret);
 		
 		if ($ret) {
 			$this->error= true;
@@ -623,6 +743,34 @@ class midnite_classic extends Module {
 		return $data;		
 	}
 	
+	/**
+	 * CALC_LOAD_DATA
+	 * custom method to divide Pin by Pout , pretty shitty, as classic pin is reported to be inaccurate
+	 * operates on the periodic array
+	 *  
+	 * @args   (string) not used
+	 * @return (array) values
+	 *
+	 **/
+
+	protected function calc_load_data($arg) {
+	
+		$data= array();
+		foreach ($this->datapoints['ibat']->data as $n=> $v) {
+			$vout=  $this->datapoints['vout']->data[$n];
+			$iout=  $this->datapoints['iout']->data[$n];
+			$iload= $iout+$v; //ibat is negative for charge.
+			 
+			if ($arg=='batstate') $val= $v>0 ? "Discharging" : "Charging";
+			if ($arg=='iabsbat')  $val= abs($v);
+			if ($arg=='iload')    $val= $iload;
+			if ($arg=='pload')    $val= $iload *$vout;
+			
+			$data[$n]= ($arg=='batstate') ? $val : number_format($val,1);
+		}
+		return $data;
+	}
+	
 	
 	/**
 	 * CALC_EFFICIENCY
@@ -645,6 +793,38 @@ class midnite_classic extends Module {
 		}
 		return $data;
 	}
+	
+	
+	/**
+	 * CALC_WBJR_DERIV
+	 * derivation for days since float/eq, etc 
+	 * operates on the day series
+	 *  
+	 * @args   (string)  stageword 
+	 * @return (string)  value
+	 *
+	 **/
+
+	protected function calc_wbjr_deriv($arg) {
+
+		$len= $this->settings['sample_interval']/60;
+		$tally= 0;
+		foreach ($this->datapoints['state']->data as $n=> $state) {
+			$vout=  $this->datapoints['vout']->data[$n];
+			$iout=  $this->datapoints['iout']->data[$n];
+			$ibat=  $this->datapoints['ibat']->data[$n];
+			$iload= $iout + $ibat; //ibat is negative for charge.
+			
+			if ($arg=='whload')                  $tally+= ($iload*$vout*$len); 
+			if ($arg=='ahcharge'    and $ibat<0) $tally+= (abs($ibat)*$len); 
+			if ($arg=='ahdischarge' and $ibat>0) $tally+= (abs($ibat)*$len);  
+		}
+		$tally= $tally/60;
+		$tally= round($tally,1);
+		
+		return $tally;
+	}
+
 	
 	/**
 	 * CALC_DAYS_SINCE
@@ -741,11 +921,11 @@ function msb($in) {
 	return ($in >> 8);
 }
 
-function bits($in,$start,$stop=0) {
-	$bitmask=0; 
-	if (!$stop) $stop=$start;
-	for ($i=$start;$i<=$stop;$i++) {
-		$bitmask+=pow(2,$start);
+function BITS($in,$start,$stop=-1) {
+	$bitmask=0;  
+	if ($stop==-1) $stop=$start;
+	for ($i=$stop;$i<=$start;$i++) {
+		$bitmask+=pow(2,$i);
 	}
 	return ($in & $bitmask >> pow(2,$stop));
 }

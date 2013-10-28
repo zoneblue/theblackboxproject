@@ -33,7 +33,6 @@ $result= $db->query($query,$params) or codeerror('DB error',__FILE__,__LINE__);
 $row= $db->fetch_row($result) or die('Invalid id'.__LINE__);
 $viewtemplate= $row['template'];
 
-
 //create page from view template
 $page= new Page($viewtemplate);
 

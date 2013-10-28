@@ -27,7 +27,7 @@ class Page {
 			$templatehtml= join('',file($templatefile));
 			
 			//preg to get tags
-			if (preg_match_all("/\{([a-z]+(?:\:\:[a-z]+)?)\}/i",$templatehtml,$m)){
+			if (preg_match_all("/\{([a-z]+(?:\:\:[a-z0-9]+)?)\}/i",$templatehtml,$m)){
 				return $m[1];
 			}
 			else return false;
