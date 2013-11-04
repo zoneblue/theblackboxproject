@@ -204,6 +204,29 @@ function codeerror($msg,$file,$line){
 		
 }
 
+class Profiler {
+	protected $start;
+	protected $record;
+	function __construct() {
+		$this->start= $this->getmtime();
+		$this->add('Profiler start');
+	}
+	function getmtime(){ 
+		list($usec, $sec) = explode(" ",microtime()); 
+		return ((float)$usec + (float)$sec); 
+	}
+	function add($l){ 
+		$this->record[]= array($l,number_format($this->getmtime()-$this->start,3));		
+	}
+	function dump() {
+		$this->add('Profiler end');
+		$o='';
+		foreach($this->record as $r){
+			$o.= $r[1].' '.$r[0]."<br>\n";
+		}
+		return $o;
+	}
+}
 
 
 

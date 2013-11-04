@@ -66,7 +66,7 @@ class midnite_classic extends Module {
 		$defns['firmdate']= array(
 			'name'=>       "Firmware Date",
 			'type'=>       'sampled',
-			'store'=>      false,
+			'store'=>      false, //lets stick to rev
 			'interval'=>   'day',
 			'method'=>     'get_register',
 			'argument'=>   "'[4102]'.'-'.MSB([4103]).'-'.LSB([4103])",
@@ -515,8 +515,8 @@ class midnite_classic extends Module {
 		$defns['whload']= array(
 			'name'=>       "Wh Load",
 			'type'=>       'derived',
-			'store'=>      false,
-			'interval'=>   'periodic',
+			'store'=>      true,
+			'interval'=>   'day',
 			'method'=>     'calc_wbjr_deriv',
 			'argument'=>   'whload',    
 			'comment'=>    '(decimal) load power, 0dp',
@@ -528,8 +528,8 @@ class midnite_classic extends Module {
 		$defns['ahcharge']= array(
 			'name'=>       "Charge Amp Hrs",
 			'type'=>       'derived',
-			'store'=>      false,
-			'interval'=>   'periodic',
+			'store'=>      true,
+			'interval'=>   'day',
 			'method'=>     'calc_wbjr_deriv',
 			'argument'=>   'ahcharge',    
 			'comment'=>    '(decimal) amp hours into battery today, 1dp',
@@ -541,8 +541,8 @@ class midnite_classic extends Module {
 		$defns['ahdischarge']= array(
 			'name'=>       "Discharge  Amp Hrs",
 			'type'=>       'derived',
-			'store'=>      false,
-			'interval'=>   'periodic',
+			'store'=>      true,
+			'interval'=>   'day',
 			'method'=>     'calc_wbjr_deriv',
 			'argument'=>   'ahdischarge',    
 			'comment'=>    '(decimal) amp hours out of battery today, 1dp',
@@ -744,11 +744,33 @@ class midnite_classic extends Module {
 	}
 	
 	/**
-	 * CALC_LOAD_DATA
-	 * custom method to divide Pin by Pout , pretty shitty, as classic pin is reported to be inaccurate
+	 * CALC_EFFICIENCY
+	 * custom method to divide Pin by Pout , pretty shitty, as classic ipv is not accurate
 	 * operates on the periodic array
 	 *  
-	 * @args   (string) not used
+	 * @args   (string) arg
+	 * @return (array) values
+	 *
+	 **/
+
+	protected function calc_efficiency($arg) {
+	
+		$data= array();
+		foreach ($this->datapoints['state']->data as $n=> $v) {
+			$pin=  $this->datapoints['ipv']->data[$n]  * $this->datapoints['vpv']->data[$n];
+			$pout= $this->datapoints['iout']->data[$n] * $this->datapoints['vout']->data[$n];
+			$val= $pout ? $pin/$pout*100 : 0;
+			$data[$n]= number_format($val,0);
+		}
+		return $data;
+	}
+	
+	/**
+	 * CALC_LOAD_DATA
+	 * WBJR periodic derivations, load current etc
+	 * operates on the periodic array
+	 *  
+	 * @args   (string) arg
 	 * @return (array) values
 	 *
 	 **/
@@ -772,32 +794,12 @@ class midnite_classic extends Module {
 	}
 	
 	
-	/**
-	 * CALC_EFFICIENCY
-	 * custom method to divide Pin by Pout , pretty shitty, as classic pin is reported to be inaccurate
-	 * operates on the periodic array
-	 *  
-	 * @args   (string) not used
-	 * @return (array) values
-	 *
-	 **/
 
-	protected function calc_efficiency($arg) {
-	
-		$data= array();
-		foreach ($this->datapoints['state']->data as $n=> $v) {
-			$pin=  $this->datapoints['ipv']->data[$n]  * $this->datapoints['vpv']->data[$n];
-			$pout= $this->datapoints['iout']->data[$n] * $this->datapoints['vout']->data[$n];
-			$val= $pout ? $pin/$pout*100 : 0;
-			$data[$n]= number_format($val,0);
-		}
-		return $data;
-	}
 	
 	
 	/**
 	 * CALC_WBJR_DERIV
-	 * derivation for days since float/eq, etc 
+	 * derivation for WBJR daily agregations 
 	 * operates on the day series
 	 *  
 	 * @args   (string)  stageword 

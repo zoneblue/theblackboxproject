@@ -18,10 +18,12 @@ $set['module_order']=        1;
 
 $set['sample_device']=       true;  //unused?
 $set['sample_during_hours']= '06-19'; //unused?
-$set['sample_interval']=     120; //seconds
+$set['sample_interval']=     $GLOBALS['SETTINGS']['sample_interval'] * 60;
+
+ //seconds
 
 $set['store_in_db']=         true;
-$set['store_interval']=      120; //seconds
+$set['store_interval']=      $GLOBALS['SETTINGS']['sample_interval'] * 60; 
 $set['store_db_table']=      'classiclogs';
 $set['store_db_table_day']=  'classicdaylogs';
 

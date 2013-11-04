@@ -17,21 +17,20 @@
  **/ 
 
 
-//define sample interval (minutes)
-//bit of hack til the classic lockup issue is resolved.
-$interval= 2; // >=1
 
-//define graph x axis times (24hr time of day)
-$graphset['start']= "06";
-$graphset['stop']=  "20";
 
 
 ### Prelim
 
 //php set
-ini_set('display_errors', 'off');
+ini_set('display_errors', 'on');
 
 require("init.php");
+
+//define graph x axis times (24hr time of day)
+$graphset['start']= "00";
+$graphset['stop']=  "24";
+$interval= $SETTINGS['sample_interval']; //minutes
 
 
 ### Read and process the module devices
