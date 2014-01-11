@@ -448,11 +448,11 @@ class Solcalc {
 			$month = ($E < 14) ? $E - 1 : $E - 13;
 			$year = (($month > 2) ? $C - 4716 : $C - 4715);
 
-			if ($flag== 2) $output = $this->zeroPad(day,2) . " " . $this->monthList($month);
-			if ($flag== 3) $output = $this->zeroPad(day,2) . $this->monthList($month) . year.toString();
-			if ($flag== 4) $output = $this->zeroPad(day,2) . $this->monthList($month) . year.toString() . (($next) ? " next" : " prev");
+			if ($flag== 2) $output = $this->zeroPad($day,2) . " " . $this->monthList($month);
+			if ($flag== 3) $output = $this->zeroPad($day,2) . $this->monthList($month) . year.toString();
+			if ($flag== 4) $output = $this->zeroPad($day,2) . $this->monthList($month) . year.toString() . (($next) ? " next" : " prev");
 		}
-		return output;
+		return $output;
 	}
 
 	function timeDateString($JD, $minutes){

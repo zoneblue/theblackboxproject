@@ -33,6 +33,10 @@ class midnite_classic extends Module {
 		$defns= array();
 		$order= 1;
 		
+		//note that anytime you make changes to the registers sampled you need to run 
+		//the check db ui to ensure database tables are in synch
+		
+		
 		### THE LESS CHANGEABLE DEVICE STATS
 		//these will only change occasionally, when cc is swapped, firmware upgraded etc
 		//so we'll store them daily and call it good
@@ -259,19 +263,6 @@ class midnite_classic extends Module {
 		);
 		
 		//whizbang figures
-		$defns['ibat']= array(
-			'name'=>       "Whizbang Current",
-			'type'=>       'sampled',
-			'store'=>      true,
-			'interval'=>   'periodic',
-			'method'=>     'get_register',
-			'argument'=>   'BITS([4371],15) ? (65536-[4371])/10 : [4371]/-10',
-			'comment'=>    '(decimal) +/- battery current, 1dp',
-			'unit'=>       'A',
-			'priority'=>   2,
-			'order'=>      $order++,
-		);
-		
 		$defns['ibatraw']= array(
 			'name'=>       "Whizbang Current Raw",
 			'type'=>       'sampled',
@@ -285,6 +276,19 @@ class midnite_classic extends Module {
 			'order'=>      $order++,
 		);
 		
+		$defns['ibat']= array(
+			'name'=>       "Whizbang Current",
+			'type'=>       'sampled',
+			'store'=>      true,
+			'interval'=>   'periodic',
+			'method'=>     'get_register',
+			'argument'=>   'BITS([4371],15) ? (65536-[4371])/10 : [4371]/-10',
+			'comment'=>    '(decimal) +/- battery current, 1dp',
+			'unit'=>       'A',
+			'priority'=>   2,
+			'order'=>      $order++,
+		);
+		
 		$defns['iabsbat']= array(
 			'name'=>       "Battery Current Abs",
 			'type'=>       'derived',
@@ -293,7 +297,31 @@ class midnite_classic extends Module {
 			'method'=>     'calc_load_data',
 			'argument'=>   'iabsbat',    
 			'comment'=>    '(decimal) signless battery current',
-			'unit'=>       '',
+			'unit'=>       'A',
+			'priority'=>   3,
+			'order'=>      $order++,
+		);
+		$defns['ichgbat']= array(
+			'name'=>       "Battery Current Charge",
+			'type'=>       'derived',
+			'store'=>      false,
+			'interval'=>   'periodic',
+			'method'=>     'calc_load_data',
+			'argument'=>   'ichgbat',    
+			'comment'=>    '(decimal) signless battery current',
+			'unit'=>       'A',
+			'priority'=>   3,
+			'order'=>      $order++,
+		);
+		$defns['idisbat']= array(
+			'name'=>       "Battery Current Discharge",
+			'type'=>       'derived',
+			'store'=>      false,
+			'interval'=>   'periodic',
+			'method'=>     'calc_load_data',
+			'argument'=>   'idisbat',    
+			'comment'=>    '(decimal) signless battery current',
+			'unit'=>       'A',
 			'priority'=>   3,
 			'order'=>      $order++,
 		);
@@ -337,7 +365,7 @@ class midnite_classic extends Module {
 			'order'=>      $order++,
 		);
 
-		//array figures
+		//pv array figures
 		$defns['vpv']= array(
 			'name'=>       "PV Voltage",
 			'type'=>       'sampled',
@@ -380,10 +408,11 @@ class midnite_classic extends Module {
 
 		//DAY TO DATE
 		//the classic tracks float time, and energy today
+		//note that ftoday and ptoday will be garbage if the classic clock is wrong
 		//we will add absorb time, bulk time, our own float time
 		//we will also derive kWh in all three states.
 		//for our derived versions well use the prefix dur for duration
-		
+	
 		
 		$defns['ftoday']= array(
 			'name'=>       "Float Time Today",
@@ -551,6 +580,43 @@ class midnite_classic extends Module {
 			'order'=>      $order++,
 		);
 
+		//and the classics net amp hour counter.
+		//its not really cear yet how this works, assuming it resets upon float
+		//(4365,4366)  WbJr.  unsigned 32 bits Amp-Hours Positive Only  Low,High
+		//(4367,4368)  WbJr.  signed 32 bits Amp-Hours Negative Only   Low,High
+		//(4369 4370)  WbJr.  signed 32 bits Amp-Hours Positive AND Negative    Low,High
+		//  '(([4370] << 16) + [4369])',
+		//new localapp says net = -21 Ah
+		//classic reads
+		//4365 574  =dec 574
+		//4366 0 
+		//4367 64941 =dec 595
+		//4368 65535 
+		//4369 65515 =dec 21
+		//4370 65535 =an entire byte for just the sign?
+		//...then later net = 1 Ah
+		//4369 1 
+		//4370 0 
+		
+		
+		//			'argument'=>   'BITS([4371],15) ? (65536-[4371])/10 : [4371]/-10',
+
+
+
+		
+		$defns['ahnet']= array(
+			'name'=>       "Whizbang Net Ah",
+			'type'=>       'sampled',
+			'store'=>      true,
+			'interval'=>   'periodic',
+			'method'=>     'get_register',
+			'argument'=>   'BITS([4369],15) ? -(65536-[4369]) : [4369]',
+			'comment'=>    '(decimal) 0dp',
+			'unit'=>       'Ah',
+			'priority'=>   2,
+			'order'=>      $order++,
+		);
+
 
 		//DAILY PEAKS AND DIPS
 		//primarily we are interested in peak pout, peak iout, vbat high and low.
@@ -625,27 +691,45 @@ class midnite_classic extends Module {
 	protected function read_device() {
 		
 		//get settings
+		$errors= false;
 		$dir=    dirname(__FILE__);
 		$binary= basename($this->settings['newmodbus_ver']);
 		$ip=     trim($this->settings['ip_address']);
-		$errors= false;
 		
-		//invoke the binary and parse the results
-		if ($this->debug) print "\nInvoke binary: $dir/$binary $ip";
-		exec("$dir/$binary $ip 16385-16390 4101-4375", $lines,$ret);
 		
-		if ($ret) {
-			$this->error= true;
-			if ($this->debug) print "\nRead device: FAIL";
-			return false;
-		}
-		else {
+		if ($this->settings['newmodbus_mode']=='daemon') {
+			$datalog=  trim($this->settings['newmodbusd_log']);
+			$lines= file($datalog);
 			foreach ($lines as $line) {
-				if (!preg_match("/^\d\d\d\d\d? /",$line)) continue;
-				list($register,$value)= explode(" ",$line);
+				if (preg_match("/^[\[-]/",$line)) continue;
+				list($register,$value)= explode(":",$line);
 				$this->registers[$register]= $value; 
 			}
+			$this->registers[16387]=0;
+			
 			if ($this->debug) print "\nRead registers: ".count($this->registers);
+		}
+		
+		//old way
+		else {
+		
+			//invoke the binary and parse the results
+			if ($this->debug) print "\nInvoke binary: $dir/$binary $ip";
+			exec("$dir/$binary $ip 16385-16390 4101-4375", $lines,$ret);
+
+			if ($ret) {
+				$this->error= true;
+				if ($this->debug) print "\nRead device: FAIL";
+				return false;
+			}
+			else {
+				foreach ($lines as $line) {
+					if (!preg_match("/^\d\d\d\d\d? /",$line)) continue;
+					list($register,$value)= explode(" ",$line);
+					$this->registers[$register]= $value; 
+				}
+				if ($this->debug) print "\nRead registers: ".count($this->registers);
+			}
 		}
 		
 		//convert raw registers to decimal datapoints
@@ -783,10 +867,12 @@ class midnite_classic extends Module {
 			$iout=  $this->datapoints['iout']->data[$n];
 			$iload= $iout+$v; //ibat is negative for charge.
 			 
-			if ($arg=='batstate') $val= $v>0 ? "Discharging" : "Charging";
-			if ($arg=='iabsbat')  $val= abs($v);
 			if ($arg=='iload')    $val= $iload;
 			if ($arg=='pload')    $val= $iload *$vout;
+			if ($arg=='iabsbat')  $val= abs($v);
+			if ($arg=='ichgbat')  $val= $v<0 ? -$v : 0;
+			if ($arg=='idisbat')  $val= $v>0 ? $v : 0;
+			if ($arg=='batstate') $val= $v>0 ? "Discharging" : "Charging";
 			
 			$data[$n]= ($arg=='batstate') ? $val : number_format($val,1);
 		}

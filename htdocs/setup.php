@@ -209,7 +209,7 @@ if ($do=='checkdb') {
 ###
 ###############################################
 
-if ($do=='delelement') {
+if ($do=='delelement2') {
 	
 	if (!$id_element) die('Invalid id '.__LINE__);
 	$query= "delete from blackboxelements where id_element= ':id_element' ";	
@@ -217,6 +217,34 @@ if ($do=='delelement') {
 	$db->query($query,$params) or codeerror('DB error',__FILE__,__LINE__);
 	$id_element=0;
 	$do='config';
+}
+
+if ($do=='delelement') {
+
+	if (!$id_element) die('Invalid id '.__LINE__);
+	
+	$doins='delelement2';
+	$backto='setup.php?do=config&id_view=$id_view';
+	
+	//Display page
+	$page->tags['PageTitle']=  'Setup';
+	$page->tags['Body']=	"
+		<form action='setup.php' method='post'>
+			<fieldset>
+				<legend>Confirm deletion</legend>
+				<div class='row'>
+					Are you sure that you want to delete element $id_element?
+				</div>
+				<div class='buttons'>
+					<input type='hidden' name='do' value='$doins' />
+					<input type='hidden' name='id_element' value='$id_element' />
+					<input type='button' value='Cancel'  onClick=\"document.location.href='$backto';\"  />
+					<input type='submit' value='OK' />
+				</div>
+			</fieldset>
+		</form>
+	";
+	$page->render();
 }
 
 

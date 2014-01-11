@@ -692,6 +692,8 @@ abstract class Module {
 	 
 	public function load_data($dtime='') {
 		
+ 		#$dtime='2013-11-18 22:00:00'; for demo
+ 		
  		if ($dtime) $this->datetime= $dtime;
  		
 		$this->profiler->add("Module $this->name load data starts");

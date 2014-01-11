@@ -6,9 +6,14 @@
 	later to provide backend graphics lib flexibility
 	ie: adding imagemagick support
 
-	mostly functions borrowed from pchart. (gpl)
-	polyline and improved wide line suport original work. webspaces.net.nz (gpl)
+	mostly functions borrowed from pchart. (GPL)
+	color conversion,polylines, and improved wide line support are original work. peter (GPLv3)
 	
+	usage: 
+	$this->draw= new Draw($width, $height);
+	$opts = array('color'=>'#ccc','linewidth'=>3,'smooth'=>true, alpha=>80);
+	$this->draw->line($x1,$y1,$x2,$y2,$opts);
+
 */
 
 
@@ -60,7 +65,7 @@ class Draw {
 		$joinmethod = $linewidth>3 ? $joinmethod : 'none';
 		
 		//Where each segment is drawn alone
-		if ($joinmethod=='round' or $joinmethod=='none') {
+		if ((count($points)==2) or $joinmethod=='round' or $joinmethod=='none') {
 			foreach ($points as $n=> $point)	{
 				if (!$n) continue;
 				
@@ -367,8 +372,8 @@ class Draw {
 		$fontname=	isset($opts["fontname"]) ? $opts["fontname"] : '';
 		$fontsize=	isset($opts["fontsize"]) ? $opts["fontsize"] : 10;
 
-		$x= round($x);
-		$y= round($y);
+		#$x= round($x);
+		#$y= round($y);
 
 
 		$txtpos = $this->gettextbox($x,$y,$fontname,$fontsize,$angle,$text);
