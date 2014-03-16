@@ -105,7 +105,13 @@ function make_graph($id_element,$settings) {
 			$dp=    $settings['datapts'][$series]['datapoint'];
 			$mult=  $settings['datapts'][$series]['multiplier'];
 			if (!isset($ydata[$series])) $ydata[$series]= array();
-			$ydata[$series][]= isset($hash[$mod][$rtime]) ? ($mult * $blackbox->modules[$mod]->datapoints[$dp]->data[$hash[$mod][$rtime]]) : NULL;
+			
+			$val= NULL;
+			if (isset($hash[$mod][$rtime])) {
+				$val= $blackbox->modules[$mod]->datapoints[$dp]->data[$hash[$mod][$rtime]];
+				$val= $mult * str_replace(',','',$val); //some data has commas, duh
+			}
+			$ydata[$series][]= $val;
 		}
 		
 		//inc

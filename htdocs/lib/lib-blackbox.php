@@ -88,6 +88,8 @@ class Blackbox {
 	}
 	
 	
+
+	
 	/**
 	 * CHECK_DBASE
 	 * checks/fixes dbase tables and fields as per module defns
@@ -427,6 +429,41 @@ abstract class Module {
 		
 		return !$this->code;
 	}
+
+
+	/**
+	 * READ_DIRECT
+	 * std module method
+	 * experimental for ajax
+	 *    
+	 * @args  nil 
+	 * @return (bool) success
+	 *
+	 **/
+	public function read_direct() {
+
+		$data= $this->read_device(); 	
+		if (!$data) $this->code= 1;
+		else {
+			//now get the day's periodic data  
+			#$this->read_dbase();
+
+			//add the fresh sample to the dp data
+			$this->datetimes['current_value']= $this->datetime;
+			$this->datetimes['periodic'][]=    $this->datetime;
+			if (!in_array(date("Y-m-d"), $this->datetimes['day'])) $this->datetimes['day'][]= date("Y-m-d", strtotime($this->datetime)); 
+			foreach ($this->datapoints as $label=> $datapoint) {
+				if (isset($data[$label]) and count($data[$label])) $datapoint->append($data[$label]);		
+			}
+
+			//do the derivations
+			$this->calc_derived();
+		}
+		
+		return !$this->code;
+	}
+
+
 
 
 	/**

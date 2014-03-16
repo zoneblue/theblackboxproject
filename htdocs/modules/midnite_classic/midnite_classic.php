@@ -289,6 +289,20 @@ class midnite_classic extends Module {
 			'order'=>      $order++,
 		);
 		
+		$defns['soc']= array(
+			'name'=>       "State of Charge",
+			'type'=>       'sampled',
+			'store'=>      true,
+			'interval'=>   'periodic',
+			'method'=>     'get_register',
+			'argument'=>   '[4373]',
+			'comment'=>    '(int) battery SOC (0dp)',
+			'unit'=>       '%',
+			'priority'=>   2,
+			'order'=>      $order++,
+		);
+
+		
 		$defns['iabsbat']= array(
 			'name'=>       "Battery Current Abs",
 			'type'=>       'derived',

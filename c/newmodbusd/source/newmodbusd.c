@@ -3,10 +3,10 @@
  * NEWMODBUSD
  *
  * Daemon version of RossW's newmodbus C command line tool.
- * Communicates with Midnite classic at a specified sample interval
- * and maintains two sets of text files containing the register listings.
- * - data.txt is the current snapshot, one entry per line, complete range.
- * - in /data/ there is one file per day, one tab seperated sample per line, register subset.
+ * Querys midnite classic at specified interval and maintains two sets
+ * of text files of the registers.
+ * - data.txt is the current snapshot, one entry per line
+ * - in /data/ there is one file per day, one tab seperated sample per line
  *
  * Revision: $Rev$
  * License: GPLv3
@@ -30,18 +30,20 @@
 #include <netinet/in.h>
 #include <netdb.h>
 
-#define LOCK_FILE	"newmodbusd.lock"
+#define VERSION 	"0.4"
 #define LOG_FILE	"newmodbusd.log"
 #define CONF_FILE	"newmodbusd.conf"
+#define LOCK_FILE	"newmodbusd.lock"
 
 //declare globals
+int debug= 0;
 char working_dir[60];  //working directory
 char host[15];         //ip address of classic
 int  port;             //modbus port
 int  interval;         //sample interval
 
 int slen,i,n,r;        //sleep length, gen purpuse ints
-long long unsigned millis, millis2; //millisec unix timestamps
+long long unsigned millis, millis2; //millisec timestamps
 char datalogfile[80];  //data filename
 FILE *fp_t, *fp_l;     //file pointers, temp and log
 struct timeval tv;     //microtimestamp
@@ -56,16 +58,18 @@ char id[101*2];	       // device ID and other scratchings.
 int len;		       //length of received data
 int addr;              //regsiter iterator
 
-//function declarations
+//functions
 int dotask(void);
 int modbus_read_registers(int addr, int number, int offset);
+int classic_connect(void);
 unsigned int modbus_register(int reg);
 void init(void);
 void daemonize(void);
 void log_message(char *filename, char *message);
 void signal_handler(int sig);
 
-
+//Register  4391  (address 4390) prerounded wbjr
+//Register 4373 or address 4372 is the SOC%
 
 /**
  * MAIN
@@ -75,15 +79,15 @@ void signal_handler(int sig);
  */
 int main(void) {
 
-	//parse config and check for key files
+	//parse config and check dependencys
 	init();
 
 	//start daemon
-	daemonize();
+	if (!debug) daemonize();
 
 	while (1) {
 
-		//sleep til start of new sample interval
+		//wait for start of each sample interval
 		gettimeofday(&tv,NULL);
 		millis= (long long unsigned)tv.tv_sec*1000 + (tv.tv_usec/1000);
 		slen= interval - (millis % interval);
@@ -113,8 +117,14 @@ int main(void) {
 		fprintf(fp_l, "[%02d:%02d:%02d.%03d] - ",lt->tm_hour,lt->tm_min,lt->tm_sec,i);
 		fprintf(fp_t, "[%04d-%02d-%02d %02d:%02d:%02d.%03d]\n",lt->tm_year+1900,lt->tm_mon+1,lt->tm_mday,lt->tm_hour,lt->tm_min,lt->tm_sec,i);
 
+		if (debug) printf("[%02d:%02d:%02d]\n",lt->tm_hour,lt->tm_min,lt->tm_sec);
+
 		//read device and record data
-		r= dotask();
+		r= dotask(); //r is the error code
+
+		//entry endings
+		fprintf(fp_l, "\n");
+		fprintf(fp_t, "--\n");
 
 		//log the duration
 		gettimeofday(&tv,NULL);
@@ -127,7 +137,7 @@ int main(void) {
 
 		//finalise data file
 		//rename is fast, thus data file has high availability to other processes
-		//that is the plan anyway
+		//that is the plan anyway ;)
 		if (!r) rename("tempdata.txt","data.txt");
 	}
 
@@ -146,69 +156,36 @@ int main(void) {
  **/
 int dotask(void){
 
-	//open a new network socket
-	if (!sock) {
-
-		log_message(LOG_FILE, "New classic socket...");
-
-		//check host
-		if ((hp = gethostbyname(host)) == NULL) {
-			log_message(LOG_FILE, "Host unreachable");
-			return(2);
-		}
-		//create pointer
-		bcopy((char *)hp->h_addr,(char *)&sa.sin_addr, hp->h_length);
-		sa.sin_family = hp->h_addrtype;
-		sa.sin_port=port>>8 | (port<<8 & 0xffff);
-
-		//get network socket
-		if((sock= socket(hp->h_addrtype, SOCK_STREAM,0)) < 0) {
-			log_message(LOG_FILE, "Socket failed");
-			return(2);
-		}
-
-		//connect to it
-		if (connect(sock, (struct sockaddr *)&sa, sizeof(sa)) < 0) {
-			log_message(LOG_FILE, "Socket connect failed");
-			return(2);
-		}
-
-		log_message(LOG_FILE, "Socket successful");
-	}
-
-
 	//read the entire main register range into the buffer array
 	//for now ignore the half doz regs at 16385-16390
 	i=0;
-	if (modbus_read_registers(4101, 50, 0  )) i=1;
-	if (modbus_read_registers(4151, 50, 50 )) i=1;
-	if (modbus_read_registers(4201, 50, 100)) i=1;
-	if (modbus_read_registers(4251, 50, 150)) i=1;
-	if (modbus_read_registers(4301, 50, 200)) i=1;
-	if (modbus_read_registers(4351, 25, 250)) i=1;
+	if (!i) i= modbus_read_registers(4101, 50, 0  );
+	if (!i) i= modbus_read_registers(4151, 50, 50 );
+	if (!i) i= modbus_read_registers(4201, 50, 100);
+	if (!i) i= modbus_read_registers(4251, 50, 150);
+	if (!i) i= modbus_read_registers(4301, 50, 200);
+	if (!i) i= modbus_read_registers(4351, 44, 250); ///highest reg is currently 4395
 
 	//any problems skip write, so the prev entry stands
 	//however we need to consider pre 1609 firmware, todo
 	if (i) {
+		close(sock); sock=0; //this will force a new socket attempt next interval
 		log_message(LOG_FILE, "Modbus read error");
-		return(1);
+		return(i);
 	}
 
 	//write registers to our data files
-	for (addr=4101; addr<=4371; addr++) {
+	for (addr=4101; addr<=4395; addr++) {
 		i= modbus_register(addr);
+
 		//all to 'current' data file
 		fprintf(fp_t, "%d:%d\n", addr, i);
 
-		//important ones to data log file
-		if (addr==4115 || addr==4116 || addr==4117 || addr==4120 || addr==4121 || addr==4132 || addr==4371 ) {
+		//important ones for daily data log
+		if (addr==4115 || addr==4116 || addr==4117 || addr==4120 || addr==4121 || addr==4132 || addr==4371 || addr==4373) {
 			fprintf(fp_l, "%d:%d\t", addr, i);
 		}
 	}
-
-	//entry endings
-	fprintf(fp_l, "\n");
-	fprintf(fp_t, "--\n");
 
 	return (0);
 }
@@ -216,13 +193,13 @@ int dotask(void){
 
 /**
  * MODBUS_READ_REGISTERS
- * Reads modbus registers via established network socket
+ * Reads modbus registers via network socket
  * Store in buffer array.
  *
  * @arg: (int) addr   , starting *register*
  * @arg: (int) number , number of 16-bit registers to read
  * @arg: (int) offset , where registers to be stored in the buffer
- * @return (int) 0 ok, 1 fail
+ * @return (int) 0 ok, >0 fail
  *
  */
 int modbus_read_registers(int addr, int number, int offset) {
@@ -239,15 +216,66 @@ int modbus_read_registers(int addr, int number, int offset) {
 	id[10]=0;              // Addresses to read (MSB)
 	id[11]=number;         // Addresses to read (LSB)
 
-	if (write(sock,&id, 12) != 12) return(1); //socket request error
-	len= read(sock, id, 7);		    // read modbus encapsulation
-	len= read(sock, id, 2);		    // read response code and bytecount
-	if (len<2 || (id[0]) != 3 || (id[1]&0xff) != number<<1) return(1); //socket reply error
+	//open a new network socket to the classic
+	if (!sock && classic_connect()) return(1);
 
-	n= id[1]&0xff;			            // number of bytes to read
-	len= read(sock, buf+(offset)*2, n);	// read response as advised
+	//socket request error
+	if (write(sock,&id, 12) != 12) {
+		return(2);
+	}
+	// read modbus encapsulation
+	len= read(sock, id, 7);
+	if (len<0) return(3);
+
+	// read response code and bytecount
+	len= read(sock, id, 2);
+	if (len<2 || (id[0]) != 3 || (id[1]&0xff) != number<<1) {
+		return(4); //socket reply error
+	}
+
+	// read response as advised
+	n= id[1]&0xff;			          // number of bytes to read
+	len= read(sock, buf+(offset)*2, n);
+	if (len <0) return(5);
 
 	return(0);
+}
+
+int classic_connect(void) {
+
+	if (debug) printf("Creating socket...\n");
+	log_message(LOG_FILE, "Creating socket... ");
+
+	//get & check host
+	if ((hp = gethostbyname(host)) == NULL) { //this doesnt appear to trip on dead host????
+		if (debug) printf("Host unreachable\n");
+		log_message(LOG_FILE, "Host unreachable");
+		return(1);
+	}
+
+	//create pointer
+	bcopy((char *)hp->h_addr,(char *)&sa.sin_addr, hp->h_length);
+	sa.sin_family = hp->h_addrtype;
+	sa.sin_port= port>>8 | (port<<8 & 0xffff);
+
+	//get network socket
+	if ((sock = socket(hp->h_addrtype, SOCK_STREAM,0)) < 0) {
+		if (debug) printf("Socket failed\n");
+		log_message(LOG_FILE, "Socket failed"); //eg local app tieing up modbus
+		return(1);
+	}
+
+	//connect to it
+	if (connect(sock, (struct sockaddr *)&sa, sizeof(sa)) < 0) {
+		if (debug) printf("Socket connect failed\n");
+		log_message(LOG_FILE, "Socket connect failed");
+		return(1);
+	}
+
+	if (debug) printf("Socket successful\n");
+	log_message(LOG_FILE, "Socket successful");
+
+	return (0);
 }
 
 
@@ -261,7 +289,7 @@ int modbus_read_registers(int addr, int number, int offset) {
  **/
 unsigned int modbus_register(int reg){
 
-	if (reg>=4101 && reg<=4371) {
+	if (reg>=4101 && reg<=4395) {
 		return((buf[(reg-4101)<<1]&0xff)<<8 | (buf[((reg-4101)<<1)+1] & 0xff));
 	}
 	else return (0);
@@ -278,9 +306,17 @@ unsigned int modbus_register(int reg){
  **/
 void init(void) {
 
+	printf("Newmodbusd Version %s\n", VERSION);
+
 	char line[80];
 	FILE *fp_c;
 	struct stat st= {0};
+
+	//already running
+	if (getppid()==1) {
+		printf("Daemon aready running\n");
+		return;
+	}
 
 	//parse config file
 	printf("Parsing config file: %s\n",CONF_FILE);
@@ -312,7 +348,7 @@ void init(void) {
 /**
  * DAEMONIZE
  * Routines to fork off daemon child process,
- * handles chdir, io, locks and signals.
+ * handles chdir, io, locks and signals etc.
  *
  * @arg (int) sig
  * @return nil
@@ -322,10 +358,8 @@ void daemonize(void) {
 	int lfp;
 	char str[10];
 
-	if (getppid()==1) { /* already a daemon */
-		log_message(LOG_FILE,"Daemon aready running");
-		return;
-	}
+	/* already a daemon */
+	if (getppid()==1) return;
 	i=fork();
 	if (i<0) exit(1); /* fork error */
 	if (i>0) exit(0); /* parent exits */
@@ -354,7 +388,7 @@ void daemonize(void) {
 
 /**
  * LOG_MESSAGE
- * Logger for daemon.
+ * Logger for daemon messages.
  *
  * @arg (char) filename
  * @arg (char) message
@@ -374,7 +408,7 @@ void log_message(char *filename, char *message) {
 
 /**
  * SIGNAL_HANDLER
- * Handler to catch kill process.
+ * Handler to catch signals.
  *
  * @arg (int) sig
  * @return nil
