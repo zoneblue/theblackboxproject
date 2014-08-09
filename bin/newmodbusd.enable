@@ -1,0 +1,20 @@
+# Config file for newmodbusd daemon
+# ip/port of the classic
+# working directory is where the logs will go, must exist
+# log registers is for the single data file.(max 10) 
+# sample interval is in millseconds
+#   - minimum 100ms
+#   - maximum 60000ms
+#   - 1000-10000ms recomended
+#
+#  NOTE: 80 chars max per conf line!
+
+
+classic_ip       192.168.0.223
+classic_port     502
+working_dir      /var/tmp
+sample_interval  1000
+log_registers    4115,4116,4117,4120,4121,4132,4371,4373
+
+
+

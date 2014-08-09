@@ -195,9 +195,13 @@ function make_graph($id_element,$settings) {
 
 	//build graph
 	$graph= new Graph($params,$data);
-	$gfile= "tmp/current-graph-$id_element.png";
+	
+	$dir= dirname(__FILE__);
+	
+	$gfile= "$dir/tmp/current-graph-$id_element.png";
 	$graph->savetofile($gfile);
-
+	chmod($gfile,0664);
+	
 	return true;
 }
 

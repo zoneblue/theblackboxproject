@@ -21,7 +21,7 @@ include('init.php');
 
 
 //additional config
-$REFRESH_RATE= 60; //seconds
+$REFRESH_RATE= 60; //webpage met refresh rate in seconds
 
 //get view
 $id_view=  (int)getpost('id_view');
@@ -110,7 +110,7 @@ $page->tags['ExtraHeaders']=  "<meta http-equiv=\"Refresh\" content=\"$REFRESH_R
 $page->tags['Foot']=          "
 	<p><a href='setup.php?do=config&amp;id_view=$id_view'>Setup</a></p>
 ";
-$page->tags['Profiler']=   "<p style='margin-top:3em;color:#666;font-size:9px;line-height:15px'>$pdump</p>";
+#$page->tags['Profiler']=   "<p style='margin-top:3em;color:#666;font-size:9px;line-height:15px'>$pdump</p>";
 
 $page->render();
 

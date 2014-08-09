@@ -106,6 +106,18 @@ class midnite_classic extends Module {
 			'order'=>      $order++,
 		);
 		
+		$defns['uptime']= array(
+			'name'=>       "Uptime",
+			'type'=>       'sampled',
+			'store'=>      true,
+			'interval'=>   'day',
+			'method'=>     'get_register',
+			'argument'=>   'round((([4350]<< 16) + [4349])/60/60/24,2)',
+			'comment'=>    '(decimal) uptime in days, 2dp',
+			'unit'=>       'days',
+			'priority'=>   3,
+			'order'=>      $order++,
+		);
 
 
 		#### REALTIME STATS OF INTEREST
@@ -266,7 +278,7 @@ class midnite_classic extends Module {
 		$defns['ibatraw']= array(
 			'name'=>       "Whizbang Current Raw",
 			'type'=>       'sampled',
-			'store'=>      true,
+			'store'=>      false,
 			'interval'=>   'periodic',
 			'method'=>     'get_register',
 			'argument'=>   '[4371]',    
@@ -282,7 +294,7 @@ class midnite_classic extends Module {
 			'store'=>      true,
 			'interval'=>   'periodic',
 			'method'=>     'get_register',
-			'argument'=>   'BITS([4371],15) ? (65536-[4371])/10 : [4371]/-10',
+			'argument'=>   'BITS([4371],15) ? (65536-[4371])/-10 : [4371]/10',
 			'comment'=>    '(decimal) +/- battery current, 1dp',
 			'unit'=>       'A',
 			'priority'=>   2,
@@ -687,6 +699,42 @@ class midnite_classic extends Module {
 			'priority'=>   2,
 			'order'=>      $order++,
 		);
+		$defns['restvbat']= array(
+			'name'=>       "Rest battery voltage",
+			'type'=>       'derived',
+			'store'=>      true,
+			'interval'=>   'day',
+			'method'=>     'calc_rest_voltage',
+			'argument'=>   '05:00', // time of day consistently prior to day time loads kicking in, and before sun comes up
+			'comment'=>    '(decimal) highest vbat between 0430 and 0500',
+			'unit'=>       'V',
+			'priority'=>   2,
+			'order'=>      $order++,
+		);
+		$defns['minsoc']= array(
+			'name'=>       "Min SOC",
+			'type'=>       'derived',
+			'store'=>      true,
+			'interval'=>   'day',
+			'method'=>     'calc_daily_min',
+			'argument'=>   'soc',
+			'comment'=>    '(decimal)',
+			'unit'=>       '%',
+			'priority'=>   2,
+			'order'=>      $order++,
+		);
+		$defns['maxsoc']= array(
+			'name'=>       "Max SOC",
+			'type'=>       'derived',
+			'store'=>      true,
+			'interval'=>   'day',
+			'method'=>     'calc_daily_max',
+			'argument'=>   'soc',
+			'comment'=>    '(decimal)',
+			'unit'=>       '%',
+			'priority'=>   2,
+			'order'=>      $order++,
+		);
 		
 		return $defns;
 	}
@@ -709,25 +757,26 @@ class midnite_classic extends Module {
 		$dir=    dirname(__FILE__);
 		$binary= basename($this->settings['newmodbus_ver']);
 		$ip=     trim($this->settings['ip_address']);
+		$stamp= date('Y-m-d H:i:s');
+		$datalog=  trim($this->settings['newmodbusd_log']);
 		
-		
+		//newmodbusd daemon
 		if ($this->settings['newmodbus_mode']=='daemon') {
-			$datalog=  trim($this->settings['newmodbusd_log']);
 			$lines= file($datalog);
 			foreach ($lines as $line) {
 				if (preg_match("/^[\[-]/",$line)) continue;
 				list($register,$value)= explode(":",$line);
 				$this->registers[$register]= $value; 
 			}
-			$this->registers[16387]=0;
+			$this->registers[16387]= 0;
 			
 			if ($this->debug) print "\nRead registers: ".count($this->registers);
 		}
 		
-		//old way
+		//newmodbus
 		else {
 		
-			//invoke the binary and parse the results
+			//invoke the binary
 			if ($this->debug) print "\nInvoke binary: $dir/$binary $ip";
 			exec("$dir/$binary $ip 16385-16390 4101-4375", $lines,$ret);
 
@@ -736,12 +785,22 @@ class midnite_classic extends Module {
 				if ($this->debug) print "\nRead device: FAIL";
 				return false;
 			}
+			//parse the results
 			else {
+				$out= "[$stamp]\n";
 				foreach ($lines as $line) {
 					if (!preg_match("/^\d\d\d\d\d? /",$line)) continue;
 					list($register,$value)= explode(" ",$line);
 					$this->registers[$register]= $value; 
+					$out="$register:$value\n";
 				}
+				$out.= "--\n";
+				
+				//save file so that both systems are on an even footing, of sorts
+				$d= dirname($datalog);
+				if (!file_exists($d)) mkdir($d,07775);
+				if (file_exists($d)) file_put_contents($datalog, $out);				
+				
 				if ($this->debug) print "\nRead registers: ".count($this->registers);
 			}
 		}
@@ -832,6 +891,7 @@ class midnite_classic extends Module {
 		);
 
 		//translate
+		$data= array();
 		foreach ($this->datapoints['state']->data as $n=> $raw) {
 			if     ($arg=='word')   $newval= $state_raw[$raw];
 			elseif ($arg=='linear') $newval= $state_map[$raw];
@@ -879,14 +939,14 @@ class midnite_classic extends Module {
 		foreach ($this->datapoints['ibat']->data as $n=> $v) {
 			$vout=  $this->datapoints['vout']->data[$n];
 			$iout=  $this->datapoints['iout']->data[$n];
-			$iload= $iout+$v; //ibat is negative for charge.
+			$iload= $iout - $v; //ibat is positive for charge.
 			 
 			if ($arg=='iload')    $val= $iload;
 			if ($arg=='pload')    $val= $iload *$vout;
 			if ($arg=='iabsbat')  $val= abs($v);
-			if ($arg=='ichgbat')  $val= $v<0 ? -$v : 0;
-			if ($arg=='idisbat')  $val= $v>0 ? $v : 0;
-			if ($arg=='batstate') $val= $v>0 ? "Discharging" : "Charging";
+			if ($arg=='ichgbat')  $val= $v>0 ? $v : 0;
+			if ($arg=='idisbat')  $val= $v<0 ? -$v : 0;
+			if ($arg=='batstate') $val= $v>0 ? "Charging" : "Discharging";
 			
 			$data[$n]= ($arg=='batstate') ? $val : number_format($val,1);
 		}
@@ -915,7 +975,7 @@ class midnite_classic extends Module {
 			$vout=  $this->datapoints['vout']->data[$n];
 			$iout=  $this->datapoints['iout']->data[$n];
 			$ibat=  $this->datapoints['ibat']->data[$n];
-			$iload= $iout + $ibat; //ibat is negative for charge.
+			$iload= $iout - $ibat; //ibat is positive for charge.
 			
 			if ($arg=='whload')                  $tally+= ($iload*$vout*$len); 
 			if ($arg=='ahcharge'    and $ibat<0) $tally+= (abs($ibat)*$len); 
@@ -945,9 +1005,9 @@ class midnite_classic extends Module {
 		//work backwards from today, making sure each day is present
 		$dn= 0; 
 		$n= count($this->datetimes['day'])-1;
-		while ($n>=0 and $dn < 90) {
+		while ($n>=0 and $dn < 30) {
 			if ($d==$this->datetimes['day'][$n]) {
-				if ($arg=='float' and $this->datapoints['durfloat']->day_data[$n]) break;
+				if ($arg=='float' and isset($this->datapoints['durfloat']->day_data[$n]) and $this->datapoints['durfloat']->day_data[$n]) break;
 				$n--;
 			}
 			$d= date("Y-m-d", strtotime("$d -1 day"));
@@ -1009,6 +1069,32 @@ class midnite_classic extends Module {
 		return $tally;
 	}
 
+
+	/**
+	 * CALC_REST_VOLTAGE
+	 * custom method to derive early morning vbat 
+	 * operates on the periodic array, returns a single value
+	 *  
+	 * @args   (time) '05:00'  
+	 * @return (string) value
+	 *
+	 **/
+
+	protected function calc_rest_voltage($arg) {
+		$rest= 0;
+		$d1= date("H:i", strtotime("$arg -30 minutes"));
+		$d2= date("H:i", strtotime($arg));
+		if ($d2 < $arg) return '';
+		foreach ($this->datapoints['vout']->data as $n=> $vbat) {
+			$d3= date("H:i", strtotime($this->datetimes['periodic'][$n]));
+			if ($d3 < $d1) continue;
+			if ($d3 > $d2) continue;
+			$rest= max((float)$rest,(float)$vbat);
+		}
+		
+		return number_format($rest,1);
+	}
+	
 	//class ends	
 }
 

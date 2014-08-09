@@ -495,7 +495,7 @@ if ($do=='editseries2' or $do=='delseries') {
 			$settings['datapts'][$series]['module']=    $mod;
 			$settings['datapts'][$series]['datapoint']= $dp;
 			$settings['datapts'][$series]['linecolor']= $linecolor;
-			$settings['datapts'][$series]['multiplier']= round($multiplier,1);
+			$settings['datapts'][$series]['multiplier']= round($multiplier,2);
 			$settings['datapts'][$series]['name']=      $name;
 		}
 		else 	unset($settings['datapts'][$series]);
@@ -934,6 +934,8 @@ if ($do=='graph') {
 	$page->render();
 }
 
+
+
 ###  EDIT VIEW
 ###
 ###############################################
@@ -1037,7 +1039,7 @@ if ($do=='delview') {
 			<fieldset>
 				<legend>Confirm deletion</legend>
 				<div class='row'>
-					Are you sure that you want to delete view $id_view?
+					Are you sure that you want to delete view $id_view and all its elements?
 				</div>
 				<div class='buttons'>
 					<input type='hidden' name='do' value='$doins' />
@@ -1140,6 +1142,7 @@ if ($do=='config') {
 }
 
 
+
 ###  VIEWS
 ###
 ###############################################
@@ -1170,12 +1173,11 @@ foreach ($modules	as $mod=> $module) {
 	$mods_insert.=	"<div>$module->name ($ndps dps)</div>"; 
 }
 
-
-//Display page
+//display page
 $page->tags['PageTitle']=  'Setup';
 $page->tags['LeftSidebar']=  "
 	<p style='font-style:italic;'>
-		A view is a visualisation of module data. Add a view, or configure views to manage the view elements.  
+		A view is a status visualisation of module data. Add a view, or configure views to edit the view elements.  
 	</p>
 ";
 $page->tags['Body']=	"

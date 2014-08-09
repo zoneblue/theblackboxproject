@@ -6,7 +6,7 @@
  * Communicates with Midnite classic.
  * Its priamry mode is to take one sample, return it to stdout/log/http then close.
  *
- * Revision: $Rev$
+ * Revision: $Rev: 33 $
  * License: GPLv3
  *
  **/

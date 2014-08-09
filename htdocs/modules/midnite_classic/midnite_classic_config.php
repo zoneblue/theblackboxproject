@@ -32,12 +32,12 @@ $set['ip_address']=         '192.168.0.223';
 $set['modbus_port']=        '502';
 
 //SET NEWMODBUS BINARY
-//choose which architecture and version from one of the files in the module folder
-//its assumed that the path is the relative to this module folder
-//the file must be chmod executable
-$set['newmodbus_mode']=   'normal'; // normal|daemon
-$set['newmodbus_ver']=    'newmodbus-1.0.19-ARM';
-$set['newmodbusd_log']=   '/home/tasks/blackbox/data.txt';// required only for daemon mode
+//for newmodbus, choose which architecture and version from one of the files in the bin folder
+//both newmodbus and newmodbusd must be chmod 0775 
+//for help deciding which to run see the main readme.
+$set['newmodbus_mode']=   'daemon'; // normal|daemon
+$set['newmodbus_ver']=    '/opt/blackbox/newmodbus-1.0.19-ARM'; // required for non daemon mode
+$set['newmodbusd_log']=   '/var/tmp/blackbox/data.txt';         // required only for daemon mode
 
 
 //===================================================================================//

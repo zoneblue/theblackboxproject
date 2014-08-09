@@ -1,0 +1,59 @@
+<html>
+<head>
+<title>the title</title>
+	<script type="text/javascript" src="templates/js/zepto.min.js"></script>
+	<script type="text/javascript" >
+		$(document).ready(init);
+
+		function init() {
+		    var refreshId = setInterval(
+		    	function() {
+					$.get('http://192.168.0.3/blackbox/real.php',ajaxhandler);
+				},
+				2000
+			)
+		}
+
+		function ajaxhandler(responseText) {
+
+			var a= responseText.split("\n");
+			var line;
+			for (var n=0;n<a.length;n++) {
+				line= a[n].split("|");
+				var key= line[0];
+				var val= line[1]+' '+line[2];
+				if (key=='Time') $("#time").html(val);
+				if (key=='Vbat') $("#vbat").html(val);
+				if (key=='SOC') $("#soc").html(val);
+				if (key=='Iout') $("#iout").html(val);
+				if (key=='Ibat') $("#ibat").html(val);
+				if (key=='Stage') $("#stage").html(val);
+			}
+		}
+   </script>
+</head>
+
+<body>
+   <div>
+   		Time: <span id="time"></span>
+   	</div>
+   <div>
+   		Stage: <span id="stage"></span>
+   	</div>
+   <div>
+   		Iout: <span id="iout"></span>
+   	</div>
+   <div>
+   		Ibat: <span id="ibat"></span>
+   	</div>
+   <div>
+   		Vbat: <span id="vbat"></span>
+   	</div>
+   <div>
+   		Soc: <span id="soc"></span>
+   	</div>
+
+   <div id="log"></div>
+</body>
+</html>
+

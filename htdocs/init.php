@@ -30,7 +30,7 @@ require('lib/lib-blackbox.php');
 
 //connect to db
 $db = new Database($SQL_TYPE);
-$db->connect($SQL_HOST, $SQL_USER, $SQL_PASS, $SQL_DB) or codeerror("DB connect failed");
+$db->connect($SQL_HOST, $SQL_USER, $SQL_PASS, $SQL_DB) or codeerror("DB connect failed",__FILE__,__LINE__);
 
 //sanity check sample interval
 $SETTINGS['sample_interval']= (int)$SETTINGS['sample_interval']>=1 ? (int)$SETTINGS['sample_interval']: 1;

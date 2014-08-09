@@ -1,6 +1,22 @@
-NEWMODBUSD
+BINARY FOLDER INFO
+The Blackbox Project
+$Rev$
 
-Description
+
+
+This folder contains c binarys and other scripts that provide services to the web application.
+Copy the contents of this folder to something like /opt/blackbox/
+
+Precompiled binarys are included for linux ARMv7 and x86.
+
+Choose either newmodbus and 1+ minute cron invoked samples, or newmodbusd in daemon mode running at 1+ second samples.
+In the former case newmodbus is invoked by /blackbox/cronjobs.php. In the latter you will need to start this manually after boot using a non privilidged system user, or as a init startup script.
+
+NEWMODBUS
+---------------
+Written By Ross, this is the orginal newmodbus. Its a super lightweight, very fast modbus tool designed to connect, read and disconnnect. It does have some other functions including write and http push, see -h.
+
+NEWMODBUSD
 ---------------
 This is a reworked version of RossW's newmodbus program coded in c.
 
@@ -21,7 +37,19 @@ Note also it probably requires classic firmware 1609 or better.
 The binary here is compiled in Cubieboard (ARM v7 instruction set), should work on Beaglebone, and Rasberry Pi probably.
 
 Installation.
---------------
-Copy the binary and the conf file somewhere using for example /opt/newmodbusd, then add an empty folder /opt/newmodbusd/data, chmod newmodbusd 0755, then edit newmodbusd.conf. Run as un unpriviledged user with ./newmodbusd 
-the the command ps -ef|grep newmodbusd when runngin correctly will show the process id. Use ./killnewmodbusd to stop it.
+
+Copy the bin folder somewhere sensible for example /opt/blackbox 
+Choose a temp data location, usually /var/tmp (as ramdisk)
+Choose a permanent data location something like /home/blackbox/data/classic
+Both folders need to be writable by the newmodbusd user.
+
+Edit newmodbusd.conf. 
+
+Start daemon ./newmodbusd 
+
+Check ps -ef | grep newmodbusd to ensure its running correctly 
+
+Use ./killnewmodbusd to stop it.
+
+You can also temporarily disable newmodbusd by renaming newmodbusd.enable to newmodbusd.disable, and reverse to restart. This may be useful so that other applications may connect to the classic.
 

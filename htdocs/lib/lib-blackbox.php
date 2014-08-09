@@ -85,9 +85,7 @@ class Blackbox {
 			$module->process_device();
 			$profiler->add("Module $module->name processed");
 		}		
-	}
-	
-	
+	}	
 
 	
 	/**
@@ -434,7 +432,7 @@ abstract class Module {
 	/**
 	 * READ_DIRECT
 	 * std module method
-	 * experimental for ajax
+	 * experimental for ajax, note should only be used with newmodbusd, as it doesnt impose any extra modbus traffic
 	 *    
 	 * @args  nil 
 	 * @return (bool) success
@@ -462,8 +460,6 @@ abstract class Module {
 		
 		return !$this->code;
 	}
-
-
 
 
 	/**
@@ -513,8 +509,8 @@ abstract class Module {
 		$result= $db->query($query,$params) or codeerror('DB error',__FILE__,__LINE__);
 		$npoints= $db->num_rows($result);
 		while ($row= $db->fetch_row($result)) {
-			//hash
 			$this->datetimes['periodic'][]=  $row['date_created'];
+			//hash
 			foreach (array_keys($data) as $label) {
 				$data[$label][]= isset($row[$label]) ? $row[$label] : '';
 			}
@@ -550,8 +546,8 @@ abstract class Module {
 		$result= $db->query($query,$params) or codeerror('DB error',__FILE__,__LINE__);
 		$npoints= $db->num_rows($result);
 		while ($row= $db->fetch_row($result)) {
-			//hash
 			$this->datetimes['day'][]= $row['date_created'];
+			//hash
 			foreach (array_keys($data) as $label) {
 				if (isset($row[$label])) $data[$label][]= $row[$label];
 			}
@@ -571,8 +567,8 @@ abstract class Module {
 
 	/**
 	 * READ_DEVICE
-	 * std module method
-	 * gets defined by module, to populate the dps of type sample 
+	 * std module method, defined per module
+	 * for dps of type=sample, talks to the RE gear to populate the dps  
 	 * 
 	 * @args  nil 
 	 * @return (bool) success
@@ -729,7 +725,7 @@ abstract class Module {
 	 
 	public function load_data($dtime='') {
 		
- 		#$dtime='2013-11-18 22:00:00'; for demo
+ 		#$dtime='2013-11-18 22:00:00'; //for demo
  		
  		if ($dtime) $this->datetime= $dtime;
  		
