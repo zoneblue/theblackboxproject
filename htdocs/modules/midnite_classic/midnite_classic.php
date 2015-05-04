@@ -1,59 +1,59 @@
 <?php
 
-/** 
+/**
  *  MIDNITE-CLASSIC
  *
- *  A module class to talk to the Midnite Classic charge controller via RossW's linux modbus c utility. 
- *  All care no responsibility, use at your own risk. 
- * 
+ *  A module class to talk to the Midnite Classic charge controller via RossW's linux modbus c utility.
+ *  All care no responsibility, use at your own risk.
+ *
  *  @revision: $Rev$
  *  @author:   Peter 2013
- *  @license:  GPLv3. 
+ *  @license:  GPLv3.
  *
- **/ 
+ **/
 
 
 
 class midnite_classic extends Module {
-	
+
 	protected $registers= array(); //temp store raw registers
-	
-	
+
+
 	/**
 	 * DEFINE_DATAPOINTS
 	 * datapoint definitions
-	 * 
-	 * @args nil 
+	 *
+	 * @args nil
 	 * @return nil
 	 *
 	 **/
-	 
+
 	protected function define_datapoints() {
-		
+
 		$defns= array();
 		$order= 1;
-		
-		//note that anytime you make changes to the registers sampled you need to run 
+
+		//note that anytime you make changes to the registers sampled you need to run
 		//the check db ui to ensure database tables are in synch
-		
-		
+
+
 		### THE LESS CHANGEABLE DEVICE STATS
 		//these will only change occasionally, when cc is swapped, firmware upgraded etc
 		//so we'll store them daily and call it good
-		
+
 		$defns['classic']= array(
 			'name'=>       "Classic Unit Type",
 			'type'=>       'sampled',
 			'store'=>      true,
 			'interval'=>   'day',
 			'method'=>     'get_register',
-			'argument'=>   'LSB([4101])', 
+			'argument'=>   'LSB([4101])',
 			'comment'=>    '(int) Classic 150=150,Classic 200=200, Classic 250=250, Classic 250KS=251',
 			'priority'=>   3,
 			'unit'=>       '',
 			'order'=>      $order++,
 		);
-		
+
 		$defns['rev']= array(
 			'name'=>       "Classic PCB Revision",
 			'type'=>       'sampled',
@@ -66,7 +66,7 @@ class midnite_classic extends Module {
 			'priority'=>   3,
 			'order'=>      $order++,
 		);
-		
+
 		$defns['firmdate']= array(
 			'name'=>       "Firmware Date",
 			'type'=>       'sampled',
@@ -79,7 +79,7 @@ class midnite_classic extends Module {
 			'priority'=>   3,
 			'order'=>      $order++,
 		);
-		
+
 		$defns['firmver']= array(
 			'name'=>       "Firmware Version",
 			'type'=>       'sampled',
@@ -91,8 +91,8 @@ class midnite_classic extends Module {
 			'unit'=>       '',
 			'priority'=>   3,
 			'order'=>      $order++,
-		); 
-		
+		);
+
 		$defns['plifetime']= array(
 			'name'=>       "Lifetime kWh",
 			'type'=>       'sampled',
@@ -105,7 +105,7 @@ class midnite_classic extends Module {
 			'priority'=>   3,
 			'order'=>      $order++,
 		);
-		
+
 		$defns['uptime']= array(
 			'name'=>       "Uptime",
 			'type'=>       'sampled',
@@ -121,25 +121,25 @@ class midnite_classic extends Module {
 
 
 		#### REALTIME STATS OF INTEREST
-		
+
 		//CHARGE STAGE
 		//the register is an integer, but not quite in linear order
 		//hence we have 2 derived versions, one in english and one in linear order
 		//Raw: 0=Resting,3=Absorb,4=BulkMppt,5=Float,6=FloatMppt,7=Equalize,10=HyperVoc,18=EqMppt
-		
+
 		$defns['stageword']= array(
 			'name'=>       "Charge Stage",
 			'type'=>       'derived',
 			'store'=>      false,
 			'interval'=>   'day',
 			'method'=>     'translate_stage',
-			'argument'=>   'word', 
+			'argument'=>   'word',
 			'comment'=>    '(string) in english',
 			'unit'=>       '',
 			'priority'=>   1,
 			'order'=>      $order++,
 		);
-		
+
 		$defns['stagelin']= array(
 			'name'=>       "Charge Stage Lin",
 			'type'=>       'derived',
@@ -152,7 +152,7 @@ class midnite_classic extends Module {
 			'priority'=>   1,
 			'order'=>      $order++,
 		);
-		
+
 		$defns['state']= array(
 			'name'=>       "Charge Stage Raw",
 			'type'=>       'sampled',
@@ -166,7 +166,7 @@ class midnite_classic extends Module {
 			'order'=>      $order++,
 		);
 
-		
+
 		//FLAGS
 		//to save cluttering the db we will store the raw flag (in base10)
 		//and include as many derived flag values as we need/want
@@ -182,13 +182,26 @@ class midnite_classic extends Module {
 			'priority'=>   4,
 			'order'=>      $order++,
 		);
-		
-		
+
+		//temp for netowrk fix
+		$defns['debug5']= array(
+			'name'=>       "Debug5",
+			'type'=>       'sampled',
+			'store'=>      true,
+			'interval'=>   'periodic',
+			'method'=>     'get_register',
+			'argument'=>   '(([4387] << 16) + [4386])',
+			'comment'=>    '(int) decimal rendition of hex flags',
+			'unit'=>       '',
+			'priority'=>   4,
+			'order'=>      $order++,
+		);
+
 		//TEMPS
 		//the most interesting of which is tbat
-		//also present are tfet and tpcb 
+		//also present are tfet and tpcb
 		//we will assume that tfet is a good enough proxy for cc temp
-		
+
 		$defns['tbat']= array(
 			'name'=>       "Battery Temp",
 			'type'=>       'sampled',
@@ -233,8 +246,8 @@ class midnite_classic extends Module {
 		//pv volts and amps, battery volts and amps, and pout
 		//theres one level of redundancy there, and, problematically they dont agree
 		//but for now we will store them all, until someone can shed some light on this
-		//just for kicks well track the pin/pout efficiency 
-		
+		//just for kicks well track the pin/pout efficiency
+
 		$defns['pout']= array(
 			'name'=>       "Output Power",
 			'type'=>       'sampled',
@@ -273,7 +286,7 @@ class midnite_classic extends Module {
 			'priority'=>   2,
 			'order'=>      $order++,
 		);
-		
+
 		//whizbang figures
 		$defns['ibatraw']= array(
 			'name'=>       "Whizbang Current Raw",
@@ -281,13 +294,13 @@ class midnite_classic extends Module {
 			'store'=>      false,
 			'interval'=>   'periodic',
 			'method'=>     'get_register',
-			'argument'=>   '[4371]',    
+			'argument'=>   '[4371]',
 			'comment'=>    '(signed int) bat current',
 			'unit'=>       '',
 			'priority'=>   2,
 			'order'=>      $order++,
 		);
-		
+
 		$defns['ibat']= array(
 			'name'=>       "Whizbang Current",
 			'type'=>       'sampled',
@@ -300,7 +313,7 @@ class midnite_classic extends Module {
 			'priority'=>   2,
 			'order'=>      $order++,
 		);
-		
+
 		$defns['soc']= array(
 			'name'=>       "State of Charge",
 			'type'=>       'sampled',
@@ -314,14 +327,14 @@ class midnite_classic extends Module {
 			'order'=>      $order++,
 		);
 
-		
+
 		$defns['iabsbat']= array(
 			'name'=>       "Battery Current Abs",
 			'type'=>       'derived',
 			'store'=>      false,
 			'interval'=>   'periodic',
 			'method'=>     'calc_load_data',
-			'argument'=>   'iabsbat',    
+			'argument'=>   'iabsbat',
 			'comment'=>    '(decimal) signless battery current',
 			'unit'=>       'A',
 			'priority'=>   3,
@@ -333,7 +346,7 @@ class midnite_classic extends Module {
 			'store'=>      false,
 			'interval'=>   'periodic',
 			'method'=>     'calc_load_data',
-			'argument'=>   'ichgbat',    
+			'argument'=>   'ichgbat',
 			'comment'=>    '(decimal) signless battery current',
 			'unit'=>       'A',
 			'priority'=>   3,
@@ -345,20 +358,20 @@ class midnite_classic extends Module {
 			'store'=>      false,
 			'interval'=>   'periodic',
 			'method'=>     'calc_load_data',
-			'argument'=>   'idisbat',    
+			'argument'=>   'idisbat',
 			'comment'=>    '(decimal) signless battery current',
 			'unit'=>       'A',
 			'priority'=>   3,
 			'order'=>      $order++,
 		);
-		
+
 		$defns['batstate']= array(
 			'name'=>       "Battery Current State",
 			'type'=>       'derived',
 			'store'=>      false,
 			'interval'=>   'periodic',
 			'method'=>     'calc_load_data',
-			'argument'=>   'batstate',    
+			'argument'=>   'batstate',
 			'comment'=>    '(string) Charging/Discharging',
 			'unit'=>       '',
 			'priority'=>   3,
@@ -371,7 +384,7 @@ class midnite_classic extends Module {
 			'store'=>      false,
 			'interval'=>   'periodic',
 			'method'=>     'calc_load_data',
-			'argument'=>   'iload',    
+			'argument'=>   'iload',
 			'comment'=>    '(decimal) load current, 1dp',
 			'unit'=>       'A',
 			'priority'=>   2,
@@ -417,7 +430,7 @@ class midnite_classic extends Module {
 			'priority'=>   2,
 			'order'=>      $order++,
 		);
-		
+
 		$defns['eff']= array(
 			'name'=>       "Efficiency",
 			'type'=>       'derived',
@@ -438,8 +451,8 @@ class midnite_classic extends Module {
 		//we will add absorb time, bulk time, our own float time
 		//we will also derive kWh in all three states.
 		//for our derived versions well use the prefix dur for duration
-	
-		
+
+
 		$defns['ftoday']= array(
 			'name'=>       "Float Time Today",
 			'type'=>       'sampled',
@@ -573,7 +586,7 @@ class midnite_classic extends Module {
 			'store'=>      true,
 			'interval'=>   'day',
 			'method'=>     'calc_wbjr_deriv',
-			'argument'=>   'whload',    
+			'argument'=>   'whload',
 			'comment'=>    '(decimal) load power, 0dp',
 			'unit'=>       'Wh',
 			'priority'=>   2,
@@ -586,7 +599,7 @@ class midnite_classic extends Module {
 			'store'=>      true,
 			'interval'=>   'day',
 			'method'=>     'calc_wbjr_deriv',
-			'argument'=>   'ahcharge',    
+			'argument'=>   'ahcharge',
 			'comment'=>    '(decimal) amp hours into battery today, 1dp',
 			'unit'=>       'Ah',
 			'priority'=>   2,
@@ -599,7 +612,7 @@ class midnite_classic extends Module {
 			'store'=>      true,
 			'interval'=>   'day',
 			'method'=>     'calc_wbjr_deriv',
-			'argument'=>   'ahdischarge',    
+			'argument'=>   'ahdischarge',
 			'comment'=>    '(decimal) amp hours out of battery today, 1dp',
 			'unit'=>       'Ah',
 			'priority'=>   2,
@@ -615,21 +628,21 @@ class midnite_classic extends Module {
 		//new localapp says net = -21 Ah
 		//classic reads
 		//4365 574  =dec 574
-		//4366 0 
+		//4366 0
 		//4367 64941 =dec 595
-		//4368 65535 
+		//4368 65535
 		//4369 65515 =dec 21
 		//4370 65535 =an entire byte for just the sign?
 		//...then later net = 1 Ah
-		//4369 1 
-		//4370 0 
-		
-		
+		//4369 1
+		//4370 0
+
+
 		//			'argument'=>   'BITS([4371],15) ? (65536-[4371])/10 : [4371]/-10',
 
 
 
-		
+
 		$defns['ahnet']= array(
 			'name'=>       "Whizbang Net Ah",
 			'type'=>       'sampled',
@@ -647,7 +660,7 @@ class midnite_classic extends Module {
 		//DAILY PEAKS AND DIPS
 		//primarily we are interested in peak pout, peak iout, vbat high and low.
 		//but im sure others will surface
-		
+
 		$defns['maxpout']= array(
 			'name'=>       "Max power output",
 			'type'=>       'derived',
@@ -660,7 +673,7 @@ class midnite_classic extends Module {
 			'priority'=>   2,
 			'order'=>      $order++,
 		);
-		
+
 		$defns['maxiout']= array(
 			'name'=>       "Max current output",
 			'type'=>       'derived',
@@ -735,50 +748,49 @@ class midnite_classic extends Module {
 			'priority'=>   2,
 			'order'=>      $order++,
 		);
-		
+
 		return $defns;
 	}
-	
-	
+
+
 	/**
 	 * READ_DEVICE
-	 * invoke newmodbus binary, and scrape the output 
+	 * invoke newmodbus binary, and scrape the output
 	 * store all registers in this->regsiters
-	 *  
-	 * @args    nil 
+	 *
+	 * @args    nil
 	 * @return (bool) success
 	 *
 	 **/
-	 
+
 	protected function read_device() {
-		
+
 		//get settings
 		$errors= false;
-		$dir=    dirname(__FILE__);
-		$binary= basename($this->settings['newmodbus_ver']);
+		$binary= $this->settings['newmodbus_ver'];
 		$ip=     trim($this->settings['ip_address']);
 		$stamp= date('Y-m-d H:i:s');
 		$datalog=  trim($this->settings['newmodbusd_log']);
-		
+
 		//newmodbusd daemon
 		if ($this->settings['newmodbus_mode']=='daemon') {
 			$lines= file($datalog);
 			foreach ($lines as $line) {
 				if (preg_match("/^[\[-]/",$line)) continue;
 				list($register,$value)= explode(":",$line);
-				$this->registers[$register]= $value; 
+				$this->registers[$register]= $value;
 			}
 			$this->registers[16387]= 0;
-			
+
 			if ($this->debug) print "\nRead registers: ".count($this->registers);
 		}
-		
+
 		//newmodbus
 		else {
-		
+
 			//invoke the binary
 			if ($this->debug) print "\nInvoke binary: $dir/$binary $ip";
-			exec("$dir/$binary $ip 16385-16390 4101-4375", $lines,$ret);
+			exec("$binary $ip 16385-16390 4101-4375", $lines,$ret);
 
 			if ($ret) {
 				$this->error= true;
@@ -791,60 +803,60 @@ class midnite_classic extends Module {
 				foreach ($lines as $line) {
 					if (!preg_match("/^\d\d\d\d\d? /",$line)) continue;
 					list($register,$value)= explode(" ",$line);
-					$this->registers[$register]= $value; 
+					$this->registers[$register]= $value;
 					$out="$register:$value\n";
 				}
 				$out.= "--\n";
-				
+
 				//save file so that both systems are on an even footing, of sorts
-				$d= dirname($datalog);
-				if (!file_exists($d)) mkdir($d,07775);
-				if (file_exists($d)) file_put_contents($datalog, $out);				
-				
+				//$d= dirname($datalog);
+				//if (!file_exists($d)) mkdir($d,07775);
+				//if (file_exists($d)) file_put_contents($datalog, $out);
+
 				if ($this->debug) print "\nRead registers: ".count($this->registers);
 			}
 		}
-		
+
 		//convert raw registers to decimal datapoints
 		$data= array();
 		foreach ($this->datapoints as $label=> $datapoint) {
 			if ($datapoint->method=='get_register') $data[$label]= $this->get_register($datapoint->argument);
-		}	
-		
+		}
+
 		return $data;
 	}
 
-	
+
 
 	/**
 	 * GET_REGISTER
 	 * helper to read_device
-	 * evaluates the logic to combine registers or extract partial registers 
-	 * works on a single dp 
+	 * evaluates the logic to combine registers or extract partial registers
+	 * works on a single dp
 	 * lazy expression parser, fix
-	 *  
+	 *
 	 * @args   (string) expresssion
 	 * @return (decimal) dp value
 	 *
 	 **/
-	 
+
 	protected function get_register($expression) {
-		
+
 		//replace register addresses with values
-		$tail=$expression; $expression='';  
-		while (preg_match("/^(.*?)\[(\d+)\](.*)$/s",$tail,$m)){	 
+		$tail=$expression; $expression='';
+		while (preg_match("/^(.*?)\[(\d+)\](.*)$/s",$tail,$m)){
 			$expression.= $m[1]; $reg= $m[2]; $tail= $m[3];
 			$expression.= $this->registers[$reg];
 		}
 		$expression= '$decimal='.$expression.$tail.';';
-		
+
 		//use eval to evaluate the bitwise logic, nasty
 		//some sort of expression parser is needed there
 		eval($expression);
-		
+
 		return $decimal;
 	}
-	
+
 
 
 
@@ -857,16 +869,16 @@ class midnite_classic extends Module {
 
 	/**
 	 * TRANSLATE_STAGE
-	 * derived method to map the classic charge stage to more helpful things 
+	 * derived method to map the classic charge stage to more helpful things
 	 * operates on the periodic array
-	 *  
+	 *
 	 * @args   (string) dp
 	 * @return (array)  values
 	 *
 	 **/
 
 	protected function translate_stage($arg) {
-		
+
 		//map native classic charge states to english
 		$state_raw = array(
 			0=> 'Sleep',
@@ -897,22 +909,22 @@ class midnite_classic extends Module {
 			elseif ($arg=='linear') $newval= $state_map[$raw];
 			$data[$n]= $newval;
 		}
-		
-		return $data;		
+
+		return $data;
 	}
-	
+
 	/**
 	 * CALC_EFFICIENCY
 	 * custom method to divide Pin by Pout , pretty shitty, as classic ipv is not accurate
 	 * operates on the periodic array
-	 *  
+	 *
 	 * @args   (string) arg
 	 * @return (array) values
 	 *
 	 **/
 
 	protected function calc_efficiency($arg) {
-	
+
 		$data= array();
 		foreach ($this->datapoints['state']->data as $n=> $v) {
 			$pin=  $this->datapoints['ipv']->data[$n]  * $this->datapoints['vpv']->data[$n];
@@ -922,47 +934,47 @@ class midnite_classic extends Module {
 		}
 		return $data;
 	}
-	
+
 	/**
 	 * CALC_LOAD_DATA
 	 * WBJR periodic derivations, load current etc
 	 * operates on the periodic array
-	 *  
+	 *
 	 * @args   (string) arg
 	 * @return (array) values
 	 *
 	 **/
 
 	protected function calc_load_data($arg) {
-	
+
 		$data= array();
 		foreach ($this->datapoints['ibat']->data as $n=> $v) {
 			$vout=  $this->datapoints['vout']->data[$n];
 			$iout=  $this->datapoints['iout']->data[$n];
 			$iload= $iout - $v; //ibat is positive for charge.
-			 
+
 			if ($arg=='iload')    $val= $iload;
 			if ($arg=='pload')    $val= $iload *$vout;
 			if ($arg=='iabsbat')  $val= abs($v);
 			if ($arg=='ichgbat')  $val= $v>0 ? $v : 0;
 			if ($arg=='idisbat')  $val= $v<0 ? -$v : 0;
 			if ($arg=='batstate') $val= $v>0 ? "Charging" : "Discharging";
-			
+
 			$data[$n]= ($arg=='batstate') ? $val : number_format($val,1);
 		}
 		return $data;
 	}
-	
-	
 
-	
-	
+
+
+
+
 	/**
 	 * CALC_WBJR_DERIV
-	 * derivation for WBJR daily agregations 
+	 * derivation for WBJR daily agregations
 	 * operates on the day series
-	 *  
-	 * @args   (string)  stageword 
+	 *
+	 * @args   (string)  stageword
 	 * @return (string)  value
 	 *
 	 **/
@@ -976,24 +988,24 @@ class midnite_classic extends Module {
 			$iout=  $this->datapoints['iout']->data[$n];
 			$ibat=  $this->datapoints['ibat']->data[$n];
 			$iload= $iout - $ibat; //ibat is positive for charge.
-			
-			if ($arg=='whload')                  $tally+= ($iload*$vout*$len); 
-			if ($arg=='ahcharge'    and $ibat<0) $tally+= (abs($ibat)*$len); 
-			if ($arg=='ahdischarge' and $ibat>0) $tally+= (abs($ibat)*$len);  
+
+			if ($arg=='whload')                  $tally+= ($iload*$vout*$len);
+			if ($arg=='ahcharge'    and $ibat<0) $tally+= (abs($ibat)*$len);
+			if ($arg=='ahdischarge' and $ibat>0) $tally+= (abs($ibat)*$len);
 		}
 		$tally= $tally/60;
 		$tally= round($tally,1);
-		
+
 		return $tally;
 	}
 
-	
+
 	/**
 	 * CALC_DAYS_SINCE
-	 * derivation for days since float/eq, etc 
+	 * derivation for days since float/eq, etc
 	 * operates on the day series
-	 *  
-	 * @args   (string)  stageword 
+	 *
+	 * @args   (string)  stageword
 	 * @return (string)  value
 	 *
 	 **/
@@ -1001,9 +1013,9 @@ class midnite_classic extends Module {
 	protected function calc_days_since($arg) {
 
 		$d= date("Y-m-d");
-		
+
 		//work backwards from today, making sure each day is present
-		$dn= 0; 
+		$dn= 0;
 		$n= count($this->datetimes['day'])-1;
 		while ($n>=0 and $dn < 30) {
 			if ($d==$this->datetimes['day'][$n]) {
@@ -1012,18 +1024,18 @@ class midnite_classic extends Module {
 			}
 			$d= date("Y-m-d", strtotime("$d -1 day"));
 			$dn++;
-		}	
-		
+		}
+
 		return $dn;
-	}	
-	
-	
+	}
+
+
 	/**
 	 * CALC_DAILY_DURATION
-	 * derivation for time spent in each stage 
+	 * derivation for time spent in each stage
 	 * operates on the periodic array
-	 *  
-	 * @args   (string)  stageword 
+	 *
+	 * @args   (string)  stageword
 	 * @return (string)  value
 	 *
 	 **/
@@ -1032,23 +1044,23 @@ class midnite_classic extends Module {
 		$len= $this->settings['sample_interval']/60;
 		$tally= 0;
 		foreach ($this->datapoints['state']->data as $n=> $state) {
-			if ($arg=='bulk'   and $state==4)                 $tally+= $len; 
-			if ($arg=='absorb' and $state==3)                 $tally+= $len; 
-			if ($arg=='float'  and ($state>4) and ($state<7)) $tally+= $len; 
+			if ($arg=='bulk'   and $state==4)                 $tally+= $len;
+			if ($arg=='absorb' and $state==3)                 $tally+= $len;
+			if ($arg=='float'  and ($state>4) and ($state<7)) $tally+= $len;
 		}
 		$tally= $tally/60;
 		$tally= round($tally,1);
-		
+
 		return $tally;
 	}
-	
-				
+
+
 	/**
 	 * CALC_DAILY_SUM
-	 * custom method to derive energy produced in each stage 
+	 * custom method to derive energy produced in each stage
 	 * operates on the periodic array, returns a single value
-	 *  
-	 * @args   (string) 'dplabel/stage'  
+	 *
+	 * @args   (string) 'dplabel/stage'
 	 * @return (string) value
 	 *
 	 **/
@@ -1058,24 +1070,24 @@ class midnite_classic extends Module {
 		$tally= 0;
 		foreach ($this->datapoints['state']->data as $n=> $state) {
 			$pout= $this->datapoints['pout']->data[$n];
-			if ($arg=='pout/bulk'  and ($state==4))                $tally+= ($pout*$len); 
-			if ($arg=='pout/absorb' and ($state==3))               $tally+= ($pout*$len); 
-			if ($arg=='pout/float' and ($state<7) and ($state >4)) $tally+= ($pout*$len);  
-			if ($arg=='pout/total')                                $tally+= ($pout*$len);   
+			if ($arg=='pout/bulk'  and ($state==4))                $tally+= ($pout*$len);
+			if ($arg=='pout/absorb' and ($state==3))               $tally+= ($pout*$len);
+			if ($arg=='pout/float' and ($state<7) and ($state >4)) $tally+= ($pout*$len);
+			if ($arg=='pout/total')                                $tally+= ($pout*$len);
 		}
 		$tally= $tally/60;
 		$tally= round($tally,0);
-		
+
 		return $tally;
 	}
 
 
 	/**
 	 * CALC_REST_VOLTAGE
-	 * custom method to derive early morning vbat 
+	 * custom method to derive early morning vbat
 	 * operates on the periodic array, returns a single value
-	 *  
-	 * @args   (time) '05:00'  
+	 *
+	 * @args   (time) '05:00'
 	 * @return (string) value
 	 *
 	 **/
@@ -1091,11 +1103,11 @@ class midnite_classic extends Module {
 			if ($d3 > $d2) continue;
 			$rest= max((float)$rest,(float)$vbat);
 		}
-		
+
 		return number_format($rest,1);
 	}
-	
-	//class ends	
+
+	//class ends
 }
 
 
@@ -1110,7 +1122,7 @@ function msb($in) {
 }
 
 function BITS($in,$start,$stop=-1) {
-	$bitmask=0;  
+	$bitmask=0;
 	if ($stop==-1) $stop=$start;
 	for ($i=$stop;$i<=$start;$i++) {
 		$bitmask+=pow(2,$i);

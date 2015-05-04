@@ -1,22 +1,20 @@
 <?php
 
-/** 
+/**
  *  CRONJOBS
  *  =========
  *  there is single call from cron to this file each minute, which farms out tasks to each module
  *  but indiv modules will be able to run at more or less frequent intervals as configured.
- * 
- *  @license:  GPLv3. 
+ *
+ *  @license:  GPLv3.
  *  @author:   Peter 2013
  *  @revision  $Rev$
  *
  *  Cron setup, usually something along these lines
  *  * * * * * /usr/bin/php-cgi -f /home/www-data/html/blackbox/cronjobs.php >/dev/null 2>&1
- *  * * * * * /usr/bin/wget --quiet http://192.168.0.3/blackbox/cronjobs.php >/dev/null 2>&1
+ *  * * * * * /usr/bin/wget --quiet -O /dev/null http://192.168.0.3/blackbox/cronjobs.php
  *
- **/ 
-
-
+ **/
 
 
 
@@ -49,7 +47,7 @@ $query= "
 	select * from blackboxelements
 	where type='g'
 	order by panetag,position
-";	
+";
 $params= array('id_view'=>1);
 $result= $db->query($query,$params) or codeerror('DB error',__FILE__,__LINE__);
 while ($row= $db->fetch_row($result)) {
@@ -67,14 +65,14 @@ exit;
 
 //MAKE_GRAPH
 function make_graph($id_element,$settings) {
-	
+
 	global $blackbox,$graphset;
-	
+
 	$day= date("Y-m-d");
-	
-	//to match our axis to the available data 
+
+	//to match our axis to the available data
 	//fish out once per minute datetimes for each module, and hash them
-	//to handle multiple points per minute, for now first one rules 
+	//to handle multiple points per minute, for now first one rules
 	//missing samples use NULL
 	$hash= array();
 	foreach($blackbox->modules as $mod=>$module) {
@@ -87,15 +85,15 @@ function make_graph($id_element,$settings) {
 			$hash[$mod][$rtime]= $n;
 		}
 	}
-	
+
 	//get actual data
 	$ydata= $xdata= array();
 	$stamp= "$day {$graphset['start']}:00:00";
 	while ($stamp <= "$day {$graphset['stop']}:00:00") {
-		$hr=    date("H", strtotime($stamp)); 
-		$mn=    date("i", strtotime($stamp)); 
-		$rtime= date("H:i", strtotime($stamp)); 
-		
+		$hr=    date("H", strtotime($stamp));
+		$mn=    date("i", strtotime($stamp));
+		$rtime= date("H:i", strtotime($stamp));
+
 		//set x label
 		$xdata[]= $mn=='00' ? "$hr" : '';
 
@@ -105,7 +103,7 @@ function make_graph($id_element,$settings) {
 			$dp=    $settings['datapts'][$series]['datapoint'];
 			$mult=  $settings['datapts'][$series]['multiplier'];
 			if (!isset($ydata[$series])) $ydata[$series]= array();
-			
+
 			$val= NULL;
 			if (isset($hash[$mod][$rtime])) {
 				$val= $blackbox->modules[$mod]->datapoints[$dp]->data[$hash[$mod][$rtime]];
@@ -113,10 +111,10 @@ function make_graph($id_element,$settings) {
 			}
 			$ydata[$series][]= $val;
 		}
-		
+
 		//inc
 		$stamp= date("Y-m-d H:i:s", strtotime("$stamp +1 min"));
-	}	
+	}
 
 	//data
 	$ymax=$ymin=1e20; $data=array();
@@ -156,8 +154,8 @@ function make_graph($id_element,$settings) {
 		'note_pos'=>         array(50,34),   //from tl, or use - for br aligned
 		'note_content'=>     '',
 		'fontfolder'=>       dirname(__FILE__).'/templates/fonts/', //trailing slash
-		'fontfile'=>         'opensans-semibold-latin.ttf', 
-		'fontfilebold'=>     'opensans-bold-latin.ttf', 
+		'fontfile'=>         'opensans-semibold-latin.ttf',
+		'fontfilebold'=>     'opensans-bold-latin.ttf',
 		'fontsize'=>         8,
 		'fontcolor'=>        '#444',
 		'border_color'=>     'rgb(150,150,150)',
@@ -168,7 +166,7 @@ function make_graph($id_element,$settings) {
 		'xaxistitle'=>       '',
 		'xmode'=>           'adj',  //betw, adj
 		'xusemajorgrid'=>   false,    //if false will show ticks only
-		'xuseminorgrid'=>   false,    
+		'xuseminorgrid'=>   false,
 		'xintervalmajor'=>  60,   //major grid every N points, default 1
 		'xqtyminorgrids'=>  2,    //minor grid every N major grids, default 4, must be divisible into major, use 0 for no minor ticks
 
@@ -176,32 +174,32 @@ function make_graph($id_element,$settings) {
 		'yaxistitle'=>       '',
 		'ymode'=>           'fit',  //auto, fit or exact
 		'yextents'=>        array($ymin,$ymax), //required for exact
-		'yusemajorgrid'=>   true,    
-		'yuseminorgrid'=>   false,    
+		'yusemajorgrid'=>   true,
+		'yuseminorgrid'=>   false,
 		'yqtymajorgrids'=>      9,    //no of major grids, if fit, this will be rounded using multiples of 1,2, or 5
 		'yqtyminorgrids'=>      4,    //minor grid every N major grids, default 4, must be divisible into major, use 0 for no minor ticks
 		'yaxislabelspec'=>  ($ymax-$ymin) > 10 ? 'decimal(0)' : 'decimal(1)',
 
 		//series
-		'downsample'=>         $settings['average'],           //down samples overly detailed datasets, average every N points 
+		'downsample'=>         $settings['average'],           //down samples overly detailed datasets, average every N points
 		'usedatapoints'=>      false,
 		'datapointsize'=>      1.75, //times the line thickness
 		'datapointshape'=>     'square',
-		'usedatalabels'=>      false, 
+		'usedatalabels'=>      false,
 		'datalabelinterval'=>  60, //interval of xdata points
-		'datalabelspec'=>      'decimal(1)', 
+		'datalabelspec'=>      'decimal(1)',
 		'linejoinmethod'=>     'round',
 	);
 
 	//build graph
 	$graph= new Graph($params,$data);
-	
+
 	$dir= dirname(__FILE__);
-	
+
 	$gfile= "$dir/tmp/current-graph-$id_element.png";
 	$graph->savetofile($gfile);
 	chmod($gfile,0664);
-	
+
 	return true;
 }
 

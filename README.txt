@@ -38,7 +38,7 @@ NEWMODBUSD
 4. Add cronjobs:
 * * * * *  /usr/bin/php-cgi -f /home/www-data/html/blackbox/cronjobs.php >/dev/null 2>&1
 15 1 * * * /opt/blackbox/nightly.sh
-The fist one does the one minute database writes. The second one does daily newmodbusd log rotation. 
+The first one does the one minute database writes. The second one does daily newmodbusd log rotation. 
 5. Create a folder say /home/data that the daily zips can live permanently. Edit /opt/blackbox/nightly.sh to suit your file locations.
 6. Start newmodusd with /opt/blackbox/newmodbusd Then check its running with ps -ef | grep newmodbusd . Check the /var/tmp/blackbox/data.txt file is being updated.
 
